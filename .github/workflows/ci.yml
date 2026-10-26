@@ -33,8 +33,9 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
+          # 测试使用假模型替身（tests/ 中的 FakeYOLO / sys.modules stub），
+          # 不导入 ultralytics / torch，因此无需安装体积巨大的 ML 运行时。
           python -m pip install pytest PyQt5 numpy opencv-python Pillow PyYAML
-          python -m pip install ultralytics==8.4.161
 
       - name: Run Python tests
         env:

@@ -1,5 +1,6 @@
 """Regression tests for the training path: group-aware splits, preset round-trip, optimizer wiring."""
 import json
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -128,10 +129,14 @@ class FakeYOLO:
                                         epochs=1, epoch=0)
 
 
-def test_training_parameters_reach_model_train(tmp_path, monkeypatch):
-    import ultralytics
-    monkeypatch.setattr(ultralytics, 'YOLO', FakeYOLO)
+def install_fake_ultralytics(monkeypatch):
+    """Replace ultralytics without importing it, so the suite runs without torch."""
+    monkeypatch.setitem(sys.modules, 'ultralytics', SimpleNamespace(YOLO=FakeYOLO))
     FakeYOLO.captured = None
+
+
+def test_training_parameters_reach_model_train(tmp_path, monkeypatch):
+    install_fake_ultralytics(monkeypatch)
     project = video_project(tmp_path / '项目')
     store = DatasetStore(project)
     version = store.create(ratios=(.7, .2, .1), seed=1)
@@ -152,9 +157,7 @@ def test_training_parameters_reach_model_train(tmp_path, monkeypatch):
 
 
 def test_resume_uses_the_checkpoint_and_keeps_the_original_dataset(tmp_path, monkeypatch):
-    import ultralytics
-    monkeypatch.setattr(ultralytics, 'YOLO', FakeYOLO)
-    FakeYOLO.captured = None
+    install_fake_ultralytics(monkeypatch)
     project = video_project(tmp_path / '项目')
     store = DatasetStore(project)
     version = store.create(ratios=(.7, .2, .1), seed=1)

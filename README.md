@@ -16,7 +16,7 @@
 [![构建状态](https://github.com/ZG0704666/Label-Once/actions/workflows/ci.yml/badge.svg)](https://github.com/ZG0704666/Label-Once/actions/workflows/ci.yml)
 [![开源协作](https://img.shields.io/badge/GitHub-Issues%20%7C%20Releases-181717?logo=github&logoColor=white)](#参与贡献)
 
-[快速开始](#快速开始) · [核心能力](#核心能力) · [技术架构](#技术架构) · [开发与构建](#开发与构建) · [参与贡献](#参与贡献)
+[快速开始](#快速开始) · [文档中心](./docs/README.md) · [核心能力](#核心能力) · [技术架构](#技术架构) · [开发与构建](#开发与构建) · [参与贡献](#参与贡献)
 
 </div>
 
@@ -44,6 +44,31 @@ Label Once 旨在将数据标注、数据集清洗、训练准备、模型推理
 - YOLO 兼容数据集组织与处理
 - 训练、评估与导出闭环
 - 本地部署，适合离线或受控环境
+
+---
+
+## 文档中心
+
+完整文档位于 [`docs/`](./docs/README.md)，按角色和任务组织：
+
+| 文档 | 内容 |
+| --- | --- |
+| [快速开始](./docs/01-getting-started.md) | 环境、依赖、模型权重、源码/成品启动 |
+| [架构总览](./docs/02-architecture.md) | WPF、Python 后端、worker 与文件通信 |
+| [项目目录与数据格式](./docs/03-project-layout-and-formats.md) | 项目目录、标注 sidecar、复核台账、数据集版本 |
+| [图像标注与复核](./docs/04-annotation-workflow.md) | 导入、绘框、SAM、轮廓、保存与复核语义 |
+| [视频抽帧与 SAM2 跟踪](./docs/05-video-workflow.md) | 时间戳抽帧、暂停纠偏、质量门、关键帧回填 |
+| [数据集版本与整合](./docs/06-dataset-workflow.md) | 复核门槛、分组划分、版本激活、多来源合并 |
+| [训练、评估与导出](./docs/07-training-evaluation-export.md) | 训练参数、续训、评估、推理、ONNX/OpenVINO/TensorRT |
+| [发布门禁](./docs/08-release-gate.md) | 类别顺序、泄漏、mAP 下限、逐类跌幅、量化掉点 |
+| [桥接协议](./docs/09-bridge-protocol.md) | JSONL v1 请求/响应/事件、方法表、错误语义 |
+| [WPF 桌面端](./docs/10-desktop-client.md) | 页面、快捷键、坐标变换、后端连接 |
+| [构建、打包与 CI](./docs/11-build-release-ci.md) | PyInstaller、WPF 发布、CI 作业与 torch DLL 修复 |
+| [测试与验收](./docs/12-testing.md) | Python/.NET 测试矩阵、验收脚本 |
+| [故障排查](./docs/13-troubleshooting.md) | CI、torch、后端、Qt、SAM2、导出等常见问题 |
+| [术语表](./docs/14-glossary.md) | 项目内高频概念与缩写 |
+
+端到端流程、数据集整合规范、渐进式验收和 WPF 成品验收也都在 [`docs/`](./docs/README.md) 中。
 
 ---
 
@@ -84,6 +109,7 @@ Label Once
 ├── studio/             # Python 后端，负责标注、训练、评估与数据处理
 ├── scripts/            # 构建、环境准备、验证脚本
 ├── tests/              # 自动化测试与回归验证
+├── docs/               # 文档中心（入门、流程、协议、构建、验收）
 ├── models/             # 本地模型权重目录（本地保留，不建议提交）
 ├── sam/                # SAM 权重目录（本地保留，不建议提交）
 ├── train/              # 训练产物与权重输出目录
@@ -160,7 +186,22 @@ pip install -r requirements.lock.txt
 
 ## 快速开始
 
-### 1. 运行源码
+### 1. 准备环境
+
+```powershell
+# 创建完整 Python 环境、安装 .NET SDK 并复制模型权重
+./scripts/install.ps1
+```
+
+### 2. 运行源码
+
+WPF 桌面端（当前主界面）：
+
+```powershell
+./desktop/scripts/start.ps1
+```
+
+旧版 PyQt5 界面：
 
 ```powershell
 python -m studio.app
@@ -172,7 +213,7 @@ python -m studio.app
 python launch.py
 ```
 
-### 2. 运行发布版
+### 3. 运行发布版
 
 已构建的本地 Release 可直接运行：
 
