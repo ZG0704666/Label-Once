@@ -17,11 +17,22 @@ from .domain import Box, IMAGE_EXTENSIONS, Labels, Project, atomic_write, mask_b
 EVENT_PATH = None
 
 
+def _write_stdout(text):
+    stream = sys.__stdout__
+    if stream is None:
+        return
+    buffer = getattr(stream, 'buffer', None)
+    if buffer is not None:
+        buffer.write(text.encode('utf-8'))
+        buffer.flush()
+    else:
+        stream.write(text)
+        stream.flush()
+
+
 def emit(kind, **payload):
     line = json.dumps(dict(event=kind, **payload), ensure_ascii=False, default=str, allow_nan=False) + '\n'
-    if sys.__stdout__ is not None:
-        sys.__stdout__.write(line)
-        sys.__stdout__.flush()
+    _write_stdout(line)
     if EVENT_PATH is not None:
         with EVENT_PATH.open('a', encoding='utf-8') as f:
             f.write(line)
