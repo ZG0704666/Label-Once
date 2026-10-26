@@ -1,0 +1,68 @@
+# Python runtime and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+env/
+
+# Packaging / build outputs
+build/
+dist/
+*.egg-info/
+
+# Local project execution artifacts
+runs/
+outputs/
+checkpoints/
+logs/
+*.log
+
+# Model weights and large binary assets
+models/*.pt
+models/*.pth
+models/*.onnx
+models/*.engine
+sam/*.pt
+sam/*.pth
+sam/*.onnx
+sam/*.engine
+train/weights/*
+!train/weights/.gitkeep
+
+# .NET / Visual Studio
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.db
+*.db-shm
+*.db-wal
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.tmp
+
+# Project data that should stay local
+*.annotation.json
+*.segments.json
+*.mark
+*.cache
+
+/Release
+/temp
