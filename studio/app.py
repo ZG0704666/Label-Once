@@ -7,8 +7,6 @@ import sys
 import uuid
 from pathlib import Path
 
-# Initialize the ML native runtime before Qt on Windows (same order as the EXE).
-import torch
 from PyQt5.QtCore import Qt, QTimer, QUrl
 from PyQt5.QtGui import QDesktopServices, QPixmap
 from PyQt5.QtWidgets import (QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QFormLayout,
