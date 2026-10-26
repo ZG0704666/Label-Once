@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="desktop/LabelOnce.Desktop/logo.png" width="128" alt="Label Once 图标">
+<img src="assets/logo.png" width="128" alt="Label Once 图标">
 
 # You Only Label Once 你只需标一次
 
@@ -301,7 +301,7 @@ Label Once 适合以下场景：
 
 ## 截图与演示
 
-当前仓库已包含应用图标，位于 `desktop/LabelOnce.Desktop/logo.png`。后续可以在此处补充实际运行截图或演示 GIF，例如：
+当前仓库已包含统一应用图标，位于 `assets/logo.png`，并同步用于 WPF 桌面端、Qt 工作台和 Windows 可执行文件图标。后续可以在此处补充实际运行截图或演示 GIF，例如：
 
 ```text
 docs/

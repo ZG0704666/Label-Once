@@ -8,14 +8,14 @@ import uuid
 from pathlib import Path
 
 from PyQt5.QtCore import Qt, QTimer, QUrl
-from PyQt5.QtGui import QDesktopServices, QPixmap
+from PyQt5.QtGui import QDesktopServices, QIcon, QPixmap
 from PyQt5.QtWidgets import (QApplication,QMainWindow,QWidget,QVBoxLayout,QHBoxLayout,QFormLayout,
     QPushButton,QLabel,QLineEdit,QComboBox,QSpinBox,QDoubleSpinBox,QCheckBox,QStackedWidget,
     QGridLayout,QListWidget,QSplitter,QPlainTextEdit,QFileDialog,QMessageBox,QInputDialog,QProgressBar,
     QTableWidget,QTableWidgetItem,QDialog,QDialogButtonBox,QAbstractItemView,QGroupBox,QScrollArea,QSizePolicy,QShortcut)
 
 from .canvas import AnnotationCanvas
-from .config import ADVANCED,AUGMENTS,APP_ROOT,model_paths,save_settings,settings
+from .config import ADVANCED,AUGMENTS,APP_ROOT,bundled_logo,model_paths,save_settings,settings
 from .dataset import DatasetStore
 from .domain import Box,IMAGE_EXTENSIONS,Labels,Project,atomic_write,read_json,save_json,unique_id
 from .qt_tasks import TaskManager
@@ -64,6 +64,8 @@ class Window(QMainWindow):
         super().__init__()
         self.config=settings();self.project=None;self.current_image=None;self.images=[];self.image_index=0;self.sam_request=None
         self.label_store=None;self.tracking_window=None;self.pending_model_info=None;self.clipboard_files=[];self.cut_files=False;self.review_batch=None;self.annotation_dirty=False
+        configured_logo=self.config.get('logo','')
+        self.setWindowIcon(QIcon(configured_logo or str(bundled_logo())))
         self.task=TaskManager(self);self.task.message.connect(self.on_event);self.task.log.connect(self.append_log);self.task.finished.connect(self.task_finished)
         self.setWindowTitle(self.config.get('brand','YoloTrain Studio'));self.resize(1200,780);self.setAcceptDrops(True)
         central=QWidget();self.setCentralWidget(central);layout=QVBoxLayout(central);layout.setContentsMargins(5,5,5,5);layout.setSpacing(4)
@@ -693,7 +695,7 @@ def main():
         return worker_main(sys.argv[sys.argv.index('--worker')+1])
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling,True)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps,True)
-    app=QApplication(sys.argv);app.setApplicationName('YoloTrainStudio')
+    app=QApplication(sys.argv);app.setApplicationName('YoloTrainStudio');app.setWindowIcon(QIcon(str(bundled_logo())))
     app.setStyleSheet('''QMainWindow,QDialog {background:#f3f6fb;} QWidget {font-family:"Microsoft YaHei UI";font-size:15px;color:#1f2937;} QPushButton {background:#ffffff;border:1px solid #cbd5e1;border-radius:6px;padding:5px 10px;min-height:22px;} QPushButton:hover {background:#dbeafe;border-color:#3b82f6;} QPushButton:checked {background:#dbeafe;color:#1d4ed8;border-color:#60a5fa;} QToolButton {background:white;border:1px solid #cbd5e1;border-radius:5px;padding:5px 10px;} QGroupBox {border:1px solid #dbe2eb;border-radius:5px;margin-top:10px;padding-top:10px;} QGroupBox::title {subcontrol-origin:margin;left:8px;} QLineEdit,QComboBox,QSpinBox,QDoubleSpinBox {background:white;border:1px solid #cbd5e1;border-radius:4px;padding:4px;min-height:22px;} QListWidget,QPlainTextEdit {background:white;border:1px solid #dbe2eb;border-radius:6px;} QListWidget::item {padding:8px;} QListWidget::item:selected {background:#dbeafe;color:#1e40af;} QLabel#heading {font-size:20px;font-weight:600;padding:4px 0;} QLabel#projectTitle {font-weight:600;} QProgressBar {border:1px solid #cbd5e1;border-radius:5px;text-align:center;min-height:20px;max-height:24px;} QProgressBar::chunk {background:#3b82f6;}''')
     def exception_hook(typ,value,tb):
         import traceback

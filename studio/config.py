@@ -12,6 +12,14 @@ def settings():
     return read_json(CONFIG_ROOT/'settings.json', {'brand': 'YoloTrain Studio', 'recent': [], 'sam_imgsz': 1024})
 
 
+def bundled_logo():
+    candidates = [
+        APP_ROOT/'assets'/'logo.png',
+        Path(__file__).resolve().parent.parent/'assets'/'logo.png',
+    ]
+    return next((path for path in candidates if path.exists()), candidates[-1])
+
+
 def save_settings(data):
     save_json(CONFIG_ROOT/'settings.json', data)
 
