@@ -12,7 +12,7 @@ Windows x64 本地标注、训练与模型工作台。新界面使用 .NET 10 WP
 
 - 左栏切换素材、标注、视频、训练、模型和设置。标注页的“项目”菜单提供打开、导入、数据集导出与停止任务；“高级设置”进入可滚动的模型设置页。
 - 图片切换完整居中；同视频切帧保留视角。`R` 恢复适配，滚轮在鼠标处缩放，中键或空格拖动平移。
-- `W` 绘框，`Esc` 选择，八个控制点调整大小；Delete、Ctrl+C/V、Ctrl+Z/Y；方向键微调。A/D 按住切换，松开停止；F 单次确认并进入下一张。
+- `W` 绘框，`Esc` 选择，八个控制点调整大小；Delete、Ctrl+C/V、Ctrl+Z/Y；方向键微调。A/D 按住切换，松开停止。`F` 只确认当前图片（不跳转）；跳转到下一张用工具栏“完成并下一张”。SAM 类别候选出现时按 `Enter` 可确认；双击 `Esc` 快速放弃候选并回选择模式；SAM 提交后保持当前工具，可继续点选下一处。
 - 标注保存成功后才切图。保存失败时编辑保留，可重试；后台异常退出可在设置中重启后端。
 - “管理类别”先编辑名称，再明确指定旧类别到新类别的编号映射；-1 移除旧类别标注，写入前备份原标签。
 - 右栏可调宽，窗口小于 1000 DIP 自动折叠；“侧栏”手动打开，“专注”扩大画布。
@@ -33,9 +33,9 @@ Windows x64 本地标注、训练与模型工作台。新界面使用 .NET 10 WP
 ./desktop/scripts/build.ps1
 ```
 
-开发环境名 `labelonce`，Python 3.10 x64，Torch 2.11.0+cu128 / torchvision 0.26.0。项目专用 SDK 在根目录 `.tools/dotnet`，`global.json` 锁定 10.0.401，NuGet 使用 `packages.lock.json`。脚本不修改系统 PATH。
+开发环境名 `labelonce`，Python 3.10 x64，Torch 2.11.0+cu128 / torchvision 0.26.0。项目专用 SDK 在根目录 `.tools/dotnet`，`global.json` 锁定 10.0.403，NuGet 使用 `packages.lock.json`。脚本不修改系统 PATH。
 
-输出 `Release/TrainStudio-WPF`。Python 后端用 PyInstaller 打包，WPF self-contained win-x64；WPF 用隐藏进程和重定向管道启动后端。Qt 回退成品 `Release/TrainStudio`，源码 `launch.py`。
+输出 `Release/TrainStudio-WPF`。Python 后端用 PyInstaller 打包，WPF self-contained win-x64；WPF 用隐藏进程和重定向管道启动后端。
 
 ## 验证与限制
 

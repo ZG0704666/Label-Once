@@ -79,3 +79,4 @@ Desktop.ini
 *.pfx
 credentials.json
 secrets.json
+/acceptance

@@ -34,7 +34,11 @@ public sealed class AnnotationCanvas : FrameworkElement
     public event Action<string>? ModeChanged;
     public event Action<Annotation>? CandidateReady;
     public bool HasCandidate => (pendingRectangle is { } r && r.X2-r.X1 >= 2.0/View.Width && r.Y2-r.Y1 >= 2.0/View.Height) || samCandidate is not null;
-    public bool HasDraft => pendingRectangle is not null || samCandidate is not null || prompts.Count>0 || samBox is not null || newPolygon.Count>0;
+    // 说明：pendingRectangle 在点下第一个点(尚未拖出 2px)时是零尺寸的，这不算“未确认草稿”，
+    // 否则用户在 draw 模式刚点一下起点就切工具，会弹不必要的 ResolveCandidate 确认框。
+    public bool HasDraft => (pendingRectangle is { } r && (r.Polygons is not null || r.X2-r.X1>0 || r.Y2-r.Y1>0)) || samCandidate is not null || prompts.Count>0 || samBox is not null || newPolygon.Count>0;
+    // 供窗口级 Esc 路由：多边形已有 ≥3 点时，Esc 由画布闭合（此分支保持画布内部语义）。
+    public bool IsPolygonFinishable => Mode=="polygon"&&newPolygon.Count>=3;
     int vertexRing=-1,vertex=-1;
     readonly List<double[]> newPolygon=[];
     readonly List<(double[] Point,bool Positive)> prompts=[];
@@ -134,8 +138,17 @@ public sealed class AnnotationCanvas : FrameworkElement
     public void ClearSam(){if(ReadOnly)return;var baseline=samBefore;NewSam();if(baseline is not null){Boxes=baseline.Select(b=>b.Copy()).ToList();Selected=-1;Commit();}}
     public void UpdateSam(IEnumerable<Annotation> boxes)
     {
+        bool fresh=samCandidate is null;
         samCandidate=boxes.FirstOrDefault()?.Copy();
-        if(samCandidate is not null){samObject=samCandidate.ObjectId;var prior=Boxes.FirstOrDefault(x=>x.ObjectId==samObject);if(prior is not null)samCandidate.TargetId=prior.TargetId;}
+        if(samCandidate is not null){
+            samObject=samCandidate.ObjectId;var prior=Boxes.FirstOrDefault(x=>x.ObjectId==samObject);if(prior is not null)samCandidate.TargetId=prior.TargetId;
+            if(fresh)
+            {
+                // 首次出现候选：快照 SAM 之前的基线（供“清除本次分割”恢复），并自动弹出类别确认。
+                samBefore??=Boxes.Select(b=>b.Copy()).ToList();
+                Dispatcher.BeginInvoke(RequestCandidateCategory);
+            }
+        }
         if(historyIndex>=0)history[historyIndex]=history[historyIndex] with {Candidate=samCandidate?.Copy()};
         InvalidateVisual();
     }
@@ -148,7 +161,9 @@ public sealed class AnnotationCanvas : FrameworkElement
         int existing=Boxes.FindIndex(x=>x.ObjectId==box.ObjectId);
         if(existing>=0){box.TargetId=Boxes[existing].TargetId;Boxes[existing]=box;Selected=existing;}
         else{box.TargetId=Video?NextTargetId++:-1;Boxes.Add(box);Selected=Boxes.Count-1;}
-        pendingRectangle=samCandidate=null;drawing=false;prompts.Clear();samBox=null;roi=null;samObject=null;Selected=-1;SamStateChanged?.Invoke(PromptState(),false);Commit();SetMode("select");
+        pendingRectangle=samCandidate=null;drawing=false;prompts.Clear();samBox=null;roi=null;samObject=null;samBefore=null;Selected=-1;SamStateChanged?.Invoke(PromptState(),false);Commit();
+        // SAM 系列保持当前工具：提交后可继续点选下一处 SAM 标注；绘框/多边形仍回到选择模式。
+        if(Mode!="sam-point"&&Mode!="sam-box"&&Mode!="sam-roi")SetMode("select");
     }
     public void DiscardCandidate(){samObject=null;samBefore=null;newPolygon.Clear();pendingRectangle=samCandidate=null;drawing=false;prompts.Clear();samBox=null;roi=null;NewTarget?.Invoke();InvalidateVisual();}
     void FinishPolygon()
@@ -220,7 +235,7 @@ public sealed class AnnotationCanvas : FrameworkElement
             if(selected&&box.Polygons is { } rings)foreach(var ring in rings)foreach(var v in ring){var p=Point(Screen(v[0],v[1]));dc.DrawEllipse(Cyan,new Pen(Brushes.Black,1),p,4,4);}
             if(selected&&box.Polygons is null)foreach(var h in Handles(rect))dc.DrawRectangle(Cyan,new Pen(Brushes.Black,1),new Rect(h.X-4,h.Y-4,8,8));
         }
-        Text(dc,$"{Mode switch{"sam-point"=>"＋ 正点 Q","sam-negative"=>"− 负点 E","roi"=>"当前对象 ROI","polygon"=>"多边形 · Esc 闭合并确认类别","select"=>"选择 / 编辑","draw"=>drawing?"再次单击确认矩形":"单击设置矩形起点","sam-box"=>"SAM 框提示",_=>Mode}}",new(12,12),Cyan,12);
+        Text(dc,$"{Mode switch{"sam-point"=>"＋ 正点（Q 切负点 · Esc 结束本对象）","sam-negative"=>"− 负点（E 切正点 · Esc 结束本对象）","roi"=>"当前对象 ROI（Esc 结束）","polygon"=>"多边形 · Esc 闭合并确认类别","select"=>"选择 / 编辑","draw"=>drawing?"再次单击确认矩形":"单击设置矩形起点","sam-box"=>"SAM 框提示（Esc 结束）",_=>Mode}}",new(12,12),Cyan,12);
         foreach(var prompt in prompts){var p=View.ToScreen(new(prompt.Point[0],prompt.Point[1]));dc.DrawEllipse(prompt.Positive?Brushes.LimeGreen:Brushes.OrangeRed,new Pen(Brushes.Black,1),Point(p),4,4);Text(dc,prompt.Positive?"+":"−",new(p.X+5,p.Y-10),Brushes.White,14);}
         if(roi is { } rr){var a1=Screen(rr[0],rr[1]);var a2=Screen(rr[2],rr[3]);dc.DrawRectangle(null,new Pen(Brushes.LimeGreen,2){DashStyle=DashStyles.Dash},new Rect(Point(a1),Point(a2)));}
         for(int i=0;i<newPolygon.Count;i++){var q=Point(Screen(newPolygon[i][0],newPolygon[i][1]));dc.DrawEllipse(Cyan,null,q,4,4);if(i>0)dc.DrawLine(new Pen(Cyan,2),Point(Screen(newPolygon[i-1][0],newPolygon[i-1][1])),q);}
@@ -336,6 +351,7 @@ public sealed class AnnotationCanvas : FrameworkElement
             case Key.P:SetMode("polygon");break;
             case Key.Escape:if(Mode=="polygon"&&newPolygon.Count>=3){FinishPolygon();break;}if(dragging&&before is not null&&Selected>=0&&Selected<Boxes.Count)Boxes[Selected]=before.Copy();dragging=drawing=false;DiscardCandidate();newPolygon.Clear();ReleaseMouseCapture();SetMode("select");break;
 
+            case Key.Enter:RequestCandidateCategory();break;
             case Key.Delete:Delete();break;
             case Key.Z when ctrl:Undo(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)?1:-1);break;
             case Key.Y when ctrl:Undo(1);break;

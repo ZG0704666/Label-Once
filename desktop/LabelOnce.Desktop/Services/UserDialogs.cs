@@ -84,6 +84,38 @@ public static class UserDialogs
         actions.Children.Add(cancel);actions.Children.Add(ok);panel.Children.Add(actions);window.Content=panel;
         return window.ShowDialog()==true;
     }
+    public static Dictionary<string,string>? Gate()
+    {
+        var window=new FluentWindow{Title="运行门禁检查",Width=680,SizeToContent=SizeToContent.Height,WindowStartupLocation=WindowStartupLocation.CenterOwner,Owner=Application.Current.MainWindow,Background=new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(29,35,43)),WindowBackdropType=WindowBackdropType.None};
+        var root=new DockPanel{Margin=new Thickness(18)};
+        var buttons=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right,Margin=new Thickness(0,12,0,0)};DockPanel.SetDock(buttons,Dock.Bottom);root.Children.Add(buttons);
+        var cancel=new Button{Content="取消",MinWidth=90,IsCancel=true};cancel.Click+=(_,_)=>window.DialogResult=false;buttons.Children.Add(cancel);
+        var ok=new Button{Content="开始检查",MinWidth=110,IsDefault=true,Style=(Style)Application.Current.FindResource("Primary")};buttons.Children.Add(ok);
+        var panel=new StackPanel();root.Children.Add(new ScrollViewer{Content=panel,VerticalScrollBarVisibility=ScrollBarVisibility.Auto});
+        panel.Children.Add(new TextBlock{Text="候选权重与冻结基准集为必填；基线与量化留空则跳过对应校验。所有输入一次填完，避免连续弹窗。",TextWrapping=TextWrapping.Wrap,Margin=new Thickness(3,0,3,10)});
+        var editors=new Dictionary<string,TextBox>();
+        foreach(var item in new[]{("候选模型权重","文件","模型|*.pt;*.onnx;*.engine;*.torchscript"),("冻结基准集 golden 目录","目录",""),("基线模型权重（留空跳过）","文件","模型|*.pt;*.onnx;*.engine"),("量化模型权重（留空跳过）","文件","量化模型|*.onnx;*.engine")})
+        {
+            string key=item.Item1,mode=item.Item2,filter=item.Item3;
+            panel.Children.Add(new TextBlock{Text=key,Margin=new Thickness(3,8,3,2)});
+            var box=new TextBox{MinHeight=34};var pick=new Button{Content="浏览",Margin=new Thickness(6,0,0,0),Padding=new Thickness(10,5,10,5)};
+            var row=new DockPanel();DockPanel.SetDock(pick,Dock.Right);row.Children.Add(pick);row.Children.Add(box);
+            pick.Click+=(_,_)=>{var chosen=mode=="目录"?new[]{Folder("选择目录")??""}:Files("选择文件",filter);if(chosen.Length>0)box.Text=chosen[0];};
+            panel.Children.Add(row);editors[key]=box;
+        }
+        foreach(var pair in new[]{("mAP50 下限","0.50"),("逐类 AP50 最大跌幅","0.03"),("量化最大掉点","0.02")})
+        {
+            panel.Children.Add(new TextBlock{Text=pair.Item1,Margin=new Thickness(3,8,3,2)});
+            var box=new TextBox{Text=pair.Item2,MinHeight=34};panel.Children.Add(box);editors[pair.Item1]=box;
+        }
+        var errorText=new TextBlock{Foreground=System.Windows.Media.Brushes.Orange,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(3,10,3,0)};panel.Children.Add(errorText);
+        ok.Click+=(_,_)=>{
+            if(editors["候选模型权重"].Text.Trim().Length==0||editors["冻结基准集 golden 目录"].Text.Trim().Length==0){errorText.Text="候选模型权重与冻结基准集为必填";return;}
+            if(!double.TryParse(editors["mAP50 下限"].Text,out _)||!double.TryParse(editors["逐类 AP50 最大跌幅"].Text,out _)||!double.TryParse(editors["量化最大掉点"].Text,out _)){errorText.Text="三个阈值必须是数字";return;}
+            window.DialogResult=true;};
+        window.Content=root;
+        return window.ShowDialog()==true?editors.ToDictionary(x=>x.Key,x=>x.Value.Text):null;
+    }
     public static Dictionary<string,object>? Parameters(string title,Dictionary<string,object> values)
     {
         var result=Form(title,values.ToDictionary(p=>p.Key,p=>JsonSerializer.Serialize(p.Value)),explanation:"数值直接填写；开关使用 true / false；字符串保留双引号。");

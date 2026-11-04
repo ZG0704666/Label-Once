@@ -187,9 +187,13 @@ internal static class Program
                 keybd_event(0x46,0,2,UIntPtr.Zero);await Task.Delay(200);
                 if(confirms!=1)throw new Exception($"F 单次确认失败：次数={confirms}, Focus={Keyboard.FocusedElement}, ReadOnly={canvas.ReadOnly}, Status={vm.Status}");
                 for(int i=0;(vm.Saving||(bool)transitioningField.GetValue(vm)!)&&i<100;i++)await Task.Delay(100);
-                if(vm.Saving||(bool)transitioningField.GetValue(vm)!)throw new Exception("确认跳转未在超时前结束");
-                if(vm.CurrentName==confirmedImage)throw new Exception($"完成 F 应确认并跳到下一张待完成图片：before={confirmedImage}, after={vm.CurrentName}, busy={vm.Busy}, saving={vm.Saving}, transitioning={(bool)transitioningField.GetValue(vm)!}, 状态={vm.Status}");
-                results.Add(new{test="native-navigation-release-and-single-confirm-advances",pass=true});
+                if(vm.Saving||(bool)transitioningField.GetValue(vm)!)throw new Exception("确认未在超时前结束");
+                if(vm.CurrentName!=confirmedImage)throw new Exception($"完成 F 只确认不跳转：before={confirmedImage}, after={vm.CurrentName}, busy={vm.Busy}, saving={vm.Saving}, transitioning={(bool)transitioningField.GetValue(vm)!}, 状态={vm.Status}");
+                await vm.RunAction("confirm-next");
+                for(int i=0;(vm.Saving||(bool)transitioningField.GetValue(vm)!)&&i<100;i++)await Task.Delay(100);
+                if(vm.Saving||(bool)transitioningField.GetValue(vm)!)throw new Exception("完成并下一张跳转未在超时前结束");
+                if(vm.CurrentName==confirmedImage)throw new Exception($"完成并下一张应跳到下一张待完成图片：before={confirmedImage}, after={vm.CurrentName}, busy={vm.Busy}, saving={vm.Saving}, transitioning={(bool)transitioningField.GetValue(vm)!}, 状态={vm.Status}");
+                results.Add(new{test="native-navigation-release-single-confirm-stays-confirm-next-advances",pass=true});
                 foreach(var pair in new[]{("train-page","training"),("model-page","models"),("settings","settings"),("library","library")})
                 {await vm.RunAction(pair.Item1);await Settle(window);Capture(window,Path.Combine(root,$"page-{pair.Item2}.png"));}
                 await vm.RunAction("settings");await Settle(window);

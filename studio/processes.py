@@ -170,7 +170,7 @@ class ProcessManager:
             raise RuntimeError('没有运行中的任务')
         path=Path(self.task['run'])/'control.json'
         if path.exists():
-            raise RuntimeError('上一条控制命令尚未处理')
+            raise RuntimeError('上一条控制命令尚未处理，请稍候；若卡住可停止任务后恢复')
         save_json(path, data)
         return {'accepted': True}
 

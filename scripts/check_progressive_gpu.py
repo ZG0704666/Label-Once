@@ -94,13 +94,15 @@ def main():
         max_center_distance_ratio=100,max_frame_area_ratio=1))
     tracking_worker=Worker(task);save_json(tracking_run/'task.json',task)
     old_emit=worker_module.emit; paused=False;corrected=False
+    # 说明：会话内纠偏（P1 优化1）后，人工关键帧帧 2 不再通过 start_segment 重启重放，
+    # 因此帧 2 不再产生 progress 事件；改为在最早的可用进度（帧 1 → “帧 2/”）处暂停。
     def emit(kind, **payload):
         nonlocal paused,corrected
-        if kind=='progress' and '帧 3/' in payload.get('text','') and not paused:
+        if kind=='progress' and '帧 2/' in payload.get('text','') and not paused:
             save_json(tracking_run/'control.json',dict(action='pause'));paused=True
         if kind=='tracking_state' and payload.get('state')=='paused' and not corrected:
-            frame=payload['frame'];assert frame==2
-            save_json(tracking_run/'control.json',dict(action='commit',frame=frame,next_id=8,targets=[dict(id=7,**target)]));corrected=True
+            frame=payload['frame'];assert frame==1, f'暂停应在帧 1，实际 {frame}'
+            save_json(tracking_run/'control.json',dict(action='commit',pause_token=payload['pause_token'],frame=frame,next_id=8,targets=[dict(id=7,**target)]));corrected=True
     worker_module.emit=emit
     try:
         result=tracking_worker.execute()

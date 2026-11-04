@@ -95,7 +95,7 @@ analyzing -> complete
 
 - 固定 `ultralytics==8.4.161`；版本不符会直接报错，因为内部使用了该版本的 `SAM2VideoPredictor` 结构与 mask 维度约定；
 - 模型权重来自 `sam/` 或项目 `Model/`；
-- 目标数量 1–32，目标 ID 必须在 `[0,32)`；
+- 初始目标数量建议 1–32，初始目标 ID 建议在 `[0,32)`；commit 之后可使用任意终身目标编号（例如 40），同一时刻活跃目标 ≤32；
 - 起始帧必须在视频范围内；
 - 同一时间只运行一个任务。
 
@@ -129,9 +129,9 @@ analyzing -> complete
 
 暂停确认后：
 
-- 释放模型与显存（`release_gpu`）；
+- 可选 GPU 常驻：`gpu_keep_alive`（默认开启）时暂停不释放模型与显存，等待纠偏；到 `gpu_keep_alive_seconds`（默认 300）或显式关闭常驻时才执行 `release_gpu`；
 - 读取精确的暂停帧并生成 `preview_pause_<frame>.jpg`；
-- 写入 `pause_token` 和 `gpu_released=true`；
+- 写入 `pause_token`；`gpu_released=true` 仅在显存已释放（未常驻、超时或显式关闭）后写入；
 - 只有携带正确 `pause_token` 的控制命令才允许提交。
 
 控制命令通过 `control.json` 传递（同一时间只允许一条未处理命令）：
@@ -141,7 +141,7 @@ analyzing -> complete
 | `pause` | 暂停跟踪 |
 | `resume` | 用当前目标重新初始化并继续 |
 | `correct` | 修改某个目标的框 |
-| `add` | 新增目标（受 32 个终身 ID 限制） |
+| `add` | 新增目标（同时活跃目标 ≤32；终身目标编号不封顶，会继续递增） |
 | `end` | 结束某个目标 |
 | `seek` | 仅在无活动目标时向前定位 |
 | `commit` | 提交当前暂停帧的目标修正 |
@@ -239,7 +239,7 @@ Config/video_drafts/<视频绝对路径 SHA256>.json
 
 ## 5. 性能与资源建议
 
-- 跟踪会持续占用 GPU；暂停后确认 `gpu_released=true` 再进行 SAM 单图分割，避免模型互相抢占显存；
+- 跟踪暂停默认保持 GPU 常驻（`gpu_keep_alive`，约 300 秒）以便快速纠偏；期间 SAM 单图分割会等待显存释放（或设置 `gpu_keep_alive=false` 让暂停立即释放），以 `gpu_released=true` 为准，避免模型互相抢占显存；
 - 长视频建议先用较大 `frame_step` 试跑，确认跟踪质量后再加密；
 - 抽帧和跟踪输出会显著增加磁盘占用，定期清理废弃的 `runs/`；
 - `imgsz` 必须是 32 的倍数（默认 1024）；

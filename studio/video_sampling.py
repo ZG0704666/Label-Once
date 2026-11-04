@@ -3,23 +3,31 @@ import math
 from pathlib import Path
 from .domain import digest, save_json, read_json
 
+ALLOWED_STEPS = (5, 10, 15, 20, 30)
+
+
+def sampling_spec(task):
+    """Validate frame_step/interval once; returns (frame_step, legacy_interval)."""
+    frame_step = task.get('frame_step')
+    if frame_step is None:
+        interval = float(task.get('interval', .5))
+        if not math.isfinite(interval) or interval <= 0:
+            raise ValueError('采样间隔必须是有限正数')
+        return None, interval
+    try:
+        step = int(frame_step)
+        integral = float(frame_step) == step
+    except (TypeError, ValueError, OverflowError):
+        integral = False
+    if not integral or step not in ALLOWED_STEPS:
+        raise ValueError('帧间隔只能是 5、10、15、20 或 30 帧')
+    return step, None
+
 
 def extract(worker):
     import cv2
     video = Path(worker.task['video']).resolve()
-    frame_step = worker.task.get('frame_step')
-    legacy_interval = float(worker.task.get('interval', .5)) if frame_step is None else None
-    if frame_step is not None:
-        raw_step = frame_step
-        try:
-            frame_step = int(raw_step)
-            integral = float(raw_step) == frame_step
-        except (TypeError, ValueError, OverflowError):
-            integral = False
-        if not integral or frame_step not in (5, 10, 15, 20, 30):
-            raise ValueError('帧间隔只能是 5、10、15、20 或 30 帧')
-    elif not math.isfinite(legacy_interval) or legacy_interval <= 0:
-        raise ValueError('抽帧间隔必须是有限正数')
+    frame_step, legacy_interval = sampling_spec(worker.task)
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
         raise ValueError('视频无法读取')

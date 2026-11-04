@@ -118,7 +118,6 @@ Label Once
 ├── pyproject.toml      # Python 项目元数据
 ├── README.md           # 项目说明
 ├── .gitignore          # Git 忽略规则
-├── launch.py           # Python 启动入口
 ├── backend_launch.py   # 后端启动入口
 └── Release/            # 本地发布目录（构建产物）
 ```
@@ -199,18 +198,6 @@ WPF 桌面端（当前主界面）：
 
 ```powershell
 ./desktop/scripts/start.ps1
-```
-
-旧版 PyQt5 界面：
-
-```powershell
-python -m studio.app
-```
-
-或直接使用项目中的启动入口：
-
-```powershell
-python launch.py
 ```
 
 ### 3. 运行发布版

@@ -41,21 +41,7 @@ Error loading "...\torch\lib\c10.dll" or one of its dependencies.
 - 本地：运行 `scripts/install.ps1` 或
   `pip install ultralytics==8.4.161`。
 
-### 1.3 Qt 测试报平台插件错误
-
-```text
-could not load the Qt platform plugin "windows"
-```
-
-设置：
-
-```powershell
-$env:QT_QPA_PLATFORM = "offscreen"
-```
-
-CI 已在作业级别设置该变量。
-
-### 1.4 测试通过但 CI 仍红
+### 1.3 测试通过但 CI 仍红
 
 - 确认 workflow 使用的是最新提交；
 - 检查是否有 `pytest` 缓存的旧 `.pyc`（清理 `.pytest_cache`、`__pycache__`）；
@@ -235,7 +221,7 @@ python -m pip install ultralytics==8.4.161
 
 ### 5.6 GPU 显存不足
 
-- 跟踪暂停后确认 `gpu_released=true`，再跑 SAM 单图；
+- 跟踪暂停后 GPU 默认常驻约 300 秒便于纠偏；确认 `gpu_released=true`（或设置 `gpu_keep_alive=false`）后再跑 SAM 单图；
 - 降低 `imgsz`（必须是 32 的倍数）；
 - 关闭其他 GPU 程序；
 - 重启后端释放残留显存。
@@ -345,7 +331,7 @@ python -m pip install ultralytics==8.4.161
 
 ```powershell
 python --version
-python -m pip show ultralytics torch PyQt5
+python -m pip show ultralytics torch
 dotnet --info
 nvidia-smi
 ```

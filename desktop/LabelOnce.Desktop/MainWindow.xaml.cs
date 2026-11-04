@@ -13,6 +13,7 @@ public partial class MainWindow : FluentWindow
     readonly StudioViewModel vm=new();
     bool syncing,focus,manualSidebar,closing;
     bool confirmingCandidate;
+    DateTime lastEscape;
     double sidebarWidth=280;
     public MainWindow():this(true) { }
     public MainWindow(bool openCommandLineProject)
@@ -36,7 +37,7 @@ public partial class MainWindow : FluentWindow
         Canvas.Changed+=()=>{if(!syncing)vm.AnnotationChanged();};
         Canvas.EditStarted+=vm.InvalidateSamRequests;
         Canvas.SelectionChanged+=()=>{if(syncing)return;syncing=true;try{ObjectList.SelectedIndex=Canvas.Selected;}finally{syncing=false;}};
-        Canvas.Navigate+=step=>_=vm.Safe(()=>vm.Navigate(step));Canvas.Confirm+=()=>_=vm.Safe(vm.ConfirmNext);
+        Canvas.Navigate+=step=>_=vm.Safe(()=>vm.Navigate(step));Canvas.Confirm+=()=>_=vm.Safe(vm.Confirm);
         Canvas.ViewChanged+=()=>vm.ViewStatus=Canvas.View.IsFit?"适配":"手动";
         Loaded+=async(s,e)=>{ApplyMaterial();await vm.Initialize();var args=Environment.GetCommandLineArgs();if(openCommandLineProject&&args.Length>1&&Directory.Exists(args[1]))await vm.Safe(()=>vm.OpenProject(args[1]));else if(!vm.ShowHomeAtStartup)vm.Go(StudioViewModel.PageLibrary);};
         SizeChanged+=(s,e)=>UpdateSidebar();Deactivated+=(s,e)=>Canvas.StopNavigation();Closing+=OnClosing;
@@ -66,7 +67,7 @@ public partial class MainWindow : FluentWindow
             case "redo":Canvas.Undo(1);break;
             case "clear-ai":Canvas.SetBoxes(Canvas.Boxes.Where(b=>b.Origin!="AI"));break;
             case "apply-sam":{bool locked=Canvas.ReadOnly;Canvas.ReadOnly=false;Canvas.Add(vm.PendingSam);Canvas.ReadOnly=locked;break;}
-            case "tracking-targets":Canvas.SetBoxes(vm.PendingSam,false);vm.SyncObjects();break;
+            case "tracking-targets":{bool locked=Canvas.ReadOnly;Canvas.ReadOnly=false;Canvas.SetBoxes(vm.PendingSam);Canvas.ReadOnly=locked;vm.SyncObjects();break;} // record=true：暂停期间可撤销注入取出/改绘前的状态
             case "tracking-next-id":Canvas.NextTargetId=Math.Max(Canvas.NextTargetId,vm.TrackingNextId);break;
             case "stop-navigation":Canvas.StopNavigation();break;
             case "clear-document":vm.CurrentSourcePath="Label Once";Canvas.Clear();LibraryCanvas.Clear();VideoBar.Visibility=Visibility.Collapsed;break;
@@ -95,11 +96,19 @@ public partial class MainWindow : FluentWindow
         confirmingCandidate=true;Canvas.IsHitTestVisible=false;
         try
         {
+            if(vm.SamWorking)vm.Status="SAM 正在推理，请稍候…"; // 等待排队结果时给出反馈
             while(vm.SamWorking)await Task.Delay(30);
             if(!Canvas.HasCandidate)return !Canvas.HasDraft;
-            var name=Services.UserDialogs.AnnotationCategory(vm.Classes,vm.SelectedClass>=0&&vm.SelectedClass<vm.Classes.Count?vm.Classes[vm.SelectedClass]:"");
+            var classIndex = vm.SelectedClass;
+            var className = classIndex >= 0 && classIndex < vm.Classes.Count ? vm.Classes[classIndex] : "";
+            if (vm.Objects.Count > 0 && className.Length > 0)
+            {
+                // 已有对象时默认用当前选中的类别；新的首个对象/空项目才询问类别。
+                var id = await vm.EnsureClass(className);Canvas.Classes=vm.Classes.ToArray();Canvas.CommitCandidate(id);vm.Status=$"已用 {className} 标注（侧栏可改类别）";return true;
+            }
+            var name=Services.UserDialogs.AnnotationCategory(vm.Classes,className);
             if(name is null)return false;
-            var id=await vm.EnsureClass(name);Canvas.Classes=vm.Classes.ToArray();Canvas.CommitCandidate(id);return true;
+            var createdId=await vm.EnsureClass(name);Canvas.Classes=vm.Classes.ToArray();Canvas.CommitCandidate(createdId);return true;
         }
         finally{confirmingCandidate=false;Canvas.IsHitTestVisible=true;Canvas.Refocus();}
     }
@@ -130,6 +139,20 @@ public partial class MainWindow : FluentWindow
             _=vm.Safe(()=>vm.Navigate(e.Key==Key.A?-1:1));
             e.Handled=true;
             return;
+        }
+        if(e.Key==Key.Escape)
+        {
+            if(Canvas.ReadOnly)return; // 洪泛保护：忙碌/保存中不响应
+            if(Canvas.IsPolygonFinishable)return; // 多边形 ≥3 点：交给画布闭合
+            e.Handled=true;
+            var quick=(DateTime.Now-lastEscape).TotalMilliseconds<500;lastEscape=DateTime.Now;
+            if(quick)
+            {
+                // 连按两次 Esc＝快速放弃：丢弃预览与排队结果，回到选择模式（不弹窗）
+                vm.InvalidateSamRequests();Canvas.DiscardCandidate();Canvas.SetMode("select");
+                return;
+            }
+            _=vm.Safe(()=>ChangeMode("select")); // 与“选择 Esc”按钮一致：三选一弹窗
         }
         string? mode=e.Key switch{Key.Q=>"sam-point",Key.E=>"sam-negative",Key.W=>"draw",Key.P=>"polygon",_=>null};
         if(mode is not null){_=vm.Safe(()=>ChangeMode(mode));e.Handled=true;}

@@ -57,6 +57,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
     partial void OnVideoProgressFrameChanged(int value)=>MarkProgress(value);
     partial void OnVideoProgressTotalChanged(int value)=>OnPropertyChanged(nameof(VideoDetail));
     partial void OnVideoStateChanged(string value){OnPropertyChanged(nameof(VideoStateText));OnPropertyChanged(nameof(VideoStartText));OnPropertyChanged(nameof(VideoStartEnabled));}
+    partial void OnVideoGpuReleasedChanged(bool value)=>OnPropertyChanged(nameof(VideoStateText));
     void MarkProgress(int value)
     {
         var now=Environment.TickCount64;
@@ -81,7 +82,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
             return $"帧 {done} / {VideoProgressTotal}{eta}";
         }
     }
-    public string VideoStateText=>VideoState switch{"idle"=>"未开始","starting"=>"加载模型中","tracking"=>"追踪中","waiting"=>waitingAction=="commit"?"提交中…":"暂停中…","paused"=>"已暂停 · 可直接修正","completed"=>"已完成","failed"=>"失败","cancelled"=>"已停止",var v=>v};
+    public string VideoStateText=>VideoState switch{"idle"=>"未开始","starting"=>"加载模型中","tracking"=>"追踪中","waiting"=>waitingAction=="commit"?"提交中…":"暂停中…","paused"=>VideoGpuReleased?"已暂停 · 可直接修正（显存已释放）":"已暂停 · 可直接修正（GPU 常驻，提交纠偏更快）","completed"=>"已完成","failed"=>"失败","cancelled"=>"已停止",var v=>v};
     public string VideoStartText=>VideoState switch{"tracking"=>"暂停","paused"=>"提交纠偏","starting"=>"模型加载中…","waiting"=>waitingAction=="commit"?"提交中…":"暂停中…","idle"=>Busy?"任务运行中…":"启动追踪","completed"=>Busy?"任务运行中…":"启动追踪",_=>"启动追踪"};
     public bool VideoStartEnabled=>VideoState is "tracking" or "paused"||((VideoState is "idle" or "completed")&&!Busy);
     [ObservableProperty] string resultJson="";
@@ -95,6 +96,8 @@ public partial class StudioViewModel : ObservableObject, IDisposable
     [ObservableProperty] bool acrylic=true;
     [ObservableProperty] bool dirty;
     [ObservableProperty] bool saving;
+    [ObservableProperty] bool backendDown;
+    [ObservableProperty] bool videoGpuReleased;
     [ObservableProperty] string viewStatus="适配";
     [ObservableProperty] string currentSourcePath="Label Once";
     public Func<Task<bool>> ResolveCandidate { get; set; }=()=>Task.FromResult(true);
@@ -135,8 +138,26 @@ public partial class StudioViewModel : ObservableObject, IDisposable
         {
             var review=ReviewImages.ToList();
             var index=review.FindIndex(i=>i.Name==CurrentName);
+            // 当前图不在复审列表（如视频追踪停止后 CurrentName 停在视频名）时给出可读上下文，避免误导性的 0/0
+            if(index<0)return VideoName.Length>0?$"{VideoName} · 第 {Frame+1} 帧 · 未在复审列表":"未在复审列表";
             return $"{index+1} / {review.Count} · {allImages.FirstOrDefault(i=>i.Name==CurrentName)?.Source}";
         }
+    }
+    // 从抽帧文件名 frame_%06d_f{原帧号}_t{毫秒}.jpg 解析原帧号
+    static int? FrameNumberOf(string name)
+    {
+        int i=name.IndexOf("_f");if(i<0)return null;
+        int j=name.IndexOf("_t",i);if(j<0)return null;
+        return int.TryParse(name.Substring(i+2,j-i-2),out var frame)?frame:null;
+    }
+    string FindNearestFrameImage(int frame)
+    {
+        // 抽帧图 Source 形如 " · xxx.mp4 · 原帧 N · t s"；按视频文件名匹配同视频的抽帧图
+        var video=VideoName;
+        var candidates=allImages.Where(i=>i.Source.Contains(video,StringComparison.OrdinalIgnoreCase)&&FrameNumberOf(i.Name) is not null)
+            .Select(i=>(name:i.Name,frame:FrameNumberOf(i.Name)!.Value)).ToList();
+        if(candidates.Count==0)return ReviewImages.FirstOrDefault()?.Name??"";
+        return candidates.OrderBy(c=>Math.Abs(c.frame-frame)).First().name;
     }
     static string SourceDescription(JsonElement m)=>Text(m,"video") is {Length:>0} video?$" · {Path.GetFileName(video)} · 原帧 {Number(m,"frame")} · {Text(m,"timestamp")} s":"";
     partial void OnSelectedBatchChanged(string value)=>FilterImages();
@@ -184,7 +205,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
     {
         ActionCommand=new AsyncRelayCommand<string>(RunAction);
         bridge.Event+=OnEvent;bridge.Log+=AppendLog;
-        bridge.Faulted+=message=>{Busy=false;starting=false;VideoState="idle";earlyEvents.Clear();Status=message;};
+        bridge.Faulted+=message=>{Busy=false;starting=false;BackendDown=true;VideoState="idle";earlyEvents.Clear();Status="后端进程已退出，当前标注已保留。请到“更多”菜单选择“重启后端”，或打开设置页恢复；详情："+message;};
     }
     public async Task Initialize()
     {
@@ -192,7 +213,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
         {
             bridge.Start();var hello=await bridge.Call("hello");settings=hello.GetProperty("settings").Clone();
             Brand=Text(settings,"brand","Label Once");LogoPath=Text(settings,"logo");SamSize=Number(settings,"sam_imgsz",1024);
-            foreach(var s in settings.GetProperty("recent").EnumerateArray()){var rp=s.GetString()!;RecentProjects.Add(new(Path.GetFileName(rp.TrimEnd(Path.DirectorySeparatorChar)),rp));}
+            foreach(var s in settings.GetProperty("recent").EnumerateArray()){var rp=s.GetString()!;if(Directory.Exists(rp))RecentProjects.Add(new(Path.GetFileName(rp.TrimEnd(Path.DirectorySeparatorChar)),rp));}
             advanced=Dictionary(hello.GetProperty("advanced"));augments=Dictionary(hello.GetProperty("augments"));
             Fill(Models,hello.GetProperty("models"));Fill(SamModels,hello.GetProperty("sam_models"));SelectedModel=Models.FirstOrDefault()??"";SelectedSam=SamModels.FirstOrDefault()??"";
             var prefs=hello.GetProperty("preferences");Acrylic=!prefs.TryGetProperty("acrylic",out var a)||a.GetBoolean();ShowHomeAtStartup=!prefs.TryGetProperty("show_home",out var homePref)||homePref.GetBoolean();MaterialChanged?.Invoke();Status="就绪 · 打开或新建项目";
@@ -282,10 +303,10 @@ public partial class StudioViewModel : ObservableObject, IDisposable
     }
     public void InvalidateSamRequests(){documentGeneration++;promptRevision++;queuedSam=null;}
     public void SyncObjects(){Objects.Clear();var boxes=GetBoxes();for(int i=0;i<boxes.Count;i++){var b=boxes[i];Objects.Add(new(i,b.TargetId,b.ClassId<Classes.Count?Classes[b.ClassId]:$"class_{b.ClassId}",b.Origin));}}
-    public async Task<bool> Save(bool confirm=false)
+    public async Task<bool> Save(bool confirm=false,bool resolve=true)
     {
         if(Saving)return false;
-        if(!await ResolveCandidate())return false;
+        if(resolve&&!await ResolveCandidate())return false;
         if(CurrentName.Length==0)return true;
         Saving=true;
         try{await SaveWorkspace();}catch(Exception exc){Status="工作区保存失败："+exc.Message;Saving=false;return false;}
@@ -341,11 +362,27 @@ public partial class StudioViewModel : ObservableObject, IDisposable
         // Sidebar search/status filters narrow the visible list, but review navigation
         // must still visit every image in the selected batch.
         var list=ReviewImages.ToList();int index=list.FindIndex(x=>x.Name==CurrentName);if(list.Count==0)return;
+        // 当前图不在复审列表（如视频追踪停止后 CurrentName 停在视频名）时，按方向落到首/尾，让 A/D 立刻可用
+        if(index<0){await OpenImage((step<0?list[list.Count-1]:list[0]).Name);return;}
         await OpenImage(list[Math.Clamp(index+step,0,list.Count-1)].Name);
+    }
+    public async Task Confirm()
+    {
+        if(transitioning||Busy)return;
+        if(videoPath is not null){Status="视频帧没有完成状态：暂停后点“提交纠偏”继续标注，或“结束并复核”；首帧导航用 A/D";return;}
+        transitioning=true;
+        try
+        {
+            if(!await Save(true))return;
+            await Refresh();
+            Status=ReviewCompleted>=ReviewTotal&&ReviewTotal>0?"本批次复核完成":$"当前图片已确认；批次内还有 {ReviewTotal-ReviewCompleted} 张待完成";
+        }
+        finally{transitioning=false;}
     }
     public async Task ConfirmNext()
     {
-        if(transitioning||Busy||videoPath is not null)return;
+        if(transitioning||Busy)return;
+        if(videoPath is not null){Status="视频帧没有完成状态：暂停后点“提交纠偏”继续标注，或“结束并复核”；下一帧用 D 或时间轴切换";return;}
         transitioning=true;string nextName="";
         try
         {
@@ -438,7 +475,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
                     if(revision!=promptRevision||name!=CurrentName||generation!=documentGeneration)continue;
                     PendingSam=[JsonSerializer.Deserialize<Annotation>(result.GetProperty("box"))!];CanvasAction?.Invoke("update-sam");Status="SAM 轮廓已更新 · Q 正点 / E 负点";
                 }
-                catch(Exception exc){Status="SAM 失败，保留最近轮廓与提示："+exc.Message;}
+                catch(Exception exc){Status=exc is IOException||exc.Message.Contains("后端")?"SAM 无法完成："+exc.Message+"（后端可能已退出，请在“更多”菜单选择“重启后端”后重试；当前轮廓与提示已保留）":"SAM 失败，保留最近轮廓与提示："+exc.Message;}
             }
         }
         finally{samRunning=false;SamWorking=false;}
@@ -447,11 +484,12 @@ public partial class StudioViewModel : ObservableObject, IDisposable
     {
         if(Busy||SamWorking)throw new InvalidOperationException("已有任务运行，请等待当前 SAM 请求结束");
         starting=true;Busy=true;Progress=0;taskKind=kind;taskSucceeded=false;importedNames=[];firstProblem=null;
-        progressMarks.Clear();VideoProgressFrame=0;VideoProgressTotal=0;
+        progressMarks.Clear();
+        if(kind!="import_video"){VideoProgressFrame=0;VideoProgressTotal=0;} // 回填复用跟踪进度，不把帧计数打回 0
         if(kind=="train"){CurvePath="";CurveImage=null;EpochMetrics=[];}
         try
         {
-            var task=await bridge.Call("task.start",new{project=Project,kind,options=options??[]});ActiveRun=Text(task,"run");trackingSession=Text(task,"session");Status="任务运行中："+kind;
+            var task=await bridge.Call("task.start",new{project=Project,kind,options=options??[]});ActiveRun=Text(task,"run");trackingSession=Text(task,"session");Status=kind=="import_video"?"跟踪已完成 · 正在把结果回填到已有图片…":"任务运行中："+kind;
         }
         catch{Busy=false;throw;}
         finally{starting=false;}
@@ -462,7 +500,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
         if(starting){earlyEvents.Add(e.Clone());return;}
         if(Text(e,"project")!=Project||Text(e,"run")!=ActiveRun)return;
         string kind=Text(e,"event");
-        if(kind=="progress"){Progress=e.GetProperty("value").GetDouble();Status=Text(e,"text");
+        if(kind=="progress"){var value=e.GetProperty("value").GetDouble();if(value>Progress)Progress=value;Status=Text(e,"text");
             if(e.TryGetProperty("total",out var total)&&total.TryGetInt32(out var totalCount)&&totalCount>0)VideoProgressTotal=totalCount;
             if(e.TryGetProperty("frame",out var fr)&&fr.TryGetInt32(out var frameIndex))VideoProgressFrame=Math.Max(VideoProgressFrame,frameIndex);}
         if(kind=="epoch")
@@ -506,7 +544,10 @@ public partial class StudioViewModel : ObservableObject, IDisposable
         // 等“结束并复核”在途的 SAM 轮廓收尾，否则自动导入链会被 Busy 拒绝并把该环节丢掉
         for(int i=0;i<200&&SamWorking;i++)await Task.Delay(50);
         await Refresh();
-        if(!succeeded){if(completedKind=="tracking"){videoPath=null;Dirty=false;if(allImages.Any(i=>i.Name==CurrentName))await OpenImage(CurrentName);}return;}
+        if(!succeeded){if(completedKind=="tracking"){int frame=Frame;videoPath=null;Dirty=false;
+            // 停止后 CurrentName 常停在视频名（不在抽帧列表），跳到同视频最接近当前帧的抽帧图，恢复 A/D 导航与位置显示
+            string target=allImages.Any(i=>i.Name==CurrentName)?CurrentName:FindNearestFrameImage(frame);
+            if(target.Length>0)await OpenImage(target);}return;}
         // Video products flow straight into the review batch, like the legacy Qt chain.
         if(completedKind is "extract" or "tracking"){VideoState="completed";await Start("import_video",new(){["source_run"]=ActiveRun});return;}
         if(completedKind=="import_video"&&names.Length>0)await CompleteImport(names);
@@ -571,12 +612,13 @@ public partial class StudioViewModel : ObservableObject, IDisposable
             if(state=="paused"&&Frame!=f)return;
             if(state=="paused"&&Text(e,"pause_token").Length==0){VideoState="failed";Status="暂停确认缺少有效令牌，请停止任务后恢复";return;}
             pauseToken=Text(e,"pause_token");waitingAction="";VideoState=state;Frame=f;
+            if(e.TryGetProperty("gpu_released",out var gpuReleased))VideoGpuReleased=gpuReleased.ValueKind==JsonValueKind.True;
             if(state=="paused")
             {
                 PendingSam=e.GetProperty("targets").EnumerateObject().Select(p=>{var t=p.Value;var xy=t.GetProperty("box").EnumerateArray().Select(x=>x.GetDouble()).ToArray();return new Annotation{TargetId=int.Parse(p.Name),ObjectId=Text(t,"object_id",Guid.NewGuid().ToString()),ClassId=Number(t,"cls"),X1=xy[0],Y1=xy[1],X2=xy[2],Y2=xy[3],Origin="AI",Polygons=t.TryGetProperty("polygons",out var poly)?JsonSerializer.Deserialize<List<List<double[]>>>(poly):null,Holes=t.TryGetProperty("holes",out var holes)?JsonSerializer.Deserialize<List<List<double[]>>>(holes):null};}).ToList();CanvasAction?.Invoke("tracking-targets");
                 if(e.TryGetProperty("failures",out var failures)&&failures.ValueKind==JsonValueKind.Object&&failures.GetRawText()!="{}")
-                    Status="目标漂移，已自动暂停 · "+string.Join(" · ",failures.EnumerateObject().Select(f=>{var id=int.TryParse(f.Name,out var parsed)?parsed:-1;var cls=PendingSam.FirstOrDefault(a=>a.TargetId==id);return $"目标 {f.Name}{(cls is not null&&cls.ClassId<Classes.Count?"（"+Classes[cls.ClassId]+"）":"")}：{f.Value.GetString()}";}))+"；修正后点“提交纠偏”继续";
-                else Status="已暂停 · 画布可直接修正，点“提交纠偏”继续";
+                    Status="目标漂移，已自动暂停 · "+string.Join(" · ",failures.EnumerateObject().Select(f=>{var id=int.TryParse(f.Name,out var parsed)?parsed:-1;var cls=PendingSam.FirstOrDefault(a=>a.TargetId==id);return $"目标 {f.Name}{(cls is not null&&cls.ClassId<Classes.Count?"（"+Classes[cls.ClassId]+"）":"")}：{f.Value.GetString()}";}))+"；修正会影响后续帧，点“提交纠偏”继续";
+                else Status="已暂停 · 修正会影响后续帧；点“提交纠偏”继续";
             }
         }
     }
@@ -597,24 +639,24 @@ public partial class StudioViewModel : ObservableObject, IDisposable
         switch(action)
         {
             case "new":case "open":{var path=UserDialogs.Folder("选择项目目录（新项目会创建标准目录）");if(path is not null)await OpenProject(path);break;}
-            case "library":if(!await Save())return;Go(PageLibrary);break;
+            case "library":if(!await Save(resolve:false))return;Go(PageLibrary);break;
             case "home":Go(PageHome);break;
             case "home-import":await ImportChained();break;
             case "annotation":if(Images.Count>0&&CurrentName.Length==0)await OpenImage(Images[0].Name);Go(PageAnnotation);break;
             case "video":case "video-choose":case "home-video":await VideoChained();break;
-            case "train-page":if(!await Save())return;Go(PageTraining);break;
-            case "model-page":if(!await Save())return;Go(PageModel);break;
-            case "settings":if(!await Save())return;Go(PageSettings);break;
+            case "train-page":if(!await Save(resolve:false))return;Go(PageTraining);break;
+            case "model-page":if(!await Save(resolve:false))return;Go(PageModel);break;
+            case "settings":if(!await Save(resolve:false))return;Go(PageSettings);break;
             case "segment-dataset":
                 if(!await Save())return;var topology=UserDialogs.Form("导出分割数据集",new(){["拆分多连通区域（yes / no）"]="no",["填充孔洞（yes / no）"]="no"},explanation:"默认保留实例与孔洞语义；标准 YOLO 无法表达的形状会阻止导出并列出问题。选择 yes 会明确改变导出拓扑，内部标注保留原形状。");
                 if(topology is not null)await Start("segment_dataset",new(){["split_components"]=topology.Values.First().Equals("yes",StringComparison.OrdinalIgnoreCase),["fill_holes"]=topology.Values.Last().Equals("yes",StringComparison.OrdinalIgnoreCase)});break;
             case "track-samples":
                 if(!await Save())return;
-                string sourceVideo=Text(currentMetadata,"video"),sampleRun=Text(currentMetadata,"run");
+                string sourceVideo=videoPath??Text(currentMetadata,"video"),sampleRun=Text(currentMetadata,"run");
                 if(!File.Exists(sourceVideo))throw new InvalidOperationException("原视频不存在；图片仍可标注和导出，请重新关联原视频后跟踪");
                 var targets=GetBoxes();if(targets.Count==0)throw new InvalidOperationException("请先标出目标");
                 int next=targets.Max(b=>b.TargetId)+1;foreach(var b in targets)if(b.TargetId<0)b.TargetId=next++;
-                if(targets.Select(b=>b.TargetId).Distinct().Count()!=targets.Count||next>32)throw new InvalidOperationException("目标 ID 重复或超过 32 个终身 ID");
+                if(targets.Select(b=>b.TargetId).Distinct().Count()!=targets.Count||targets.Count>32)throw new InvalidOperationException("目标 ID 重复，或同时跟踪的目标超过 32 个（新目标会自动分配新 ID，不受终身上限约束）");
                 videoPath=sourceVideo;CurrentSourcePath=sourceVideo;Frame=Number(currentMetadata,"frame");videoSession=sourceVideo;VideoState="starting";VideoName=Path.GetFileName(sourceVideo);
                 try{await Start("tracking",new(){["video"]=sourceVideo,["sample_run"]=sampleRun,["start_frame"]=Frame,["frame_step"]=FrameStep,["model"]=SelectedSam,["device"]=Device,["imgsz"]=SamSize,["targets"]=targets.Select(b=>new{id=b.TargetId,cls=b.ClassId,object_id=b.ObjectId,box=new[]{b.X1,b.Y1,b.X2,b.Y2},polygons=b.Polygons,holes=b.Holes}).ToArray(),["next_id"]=targets.Max(b=>b.TargetId)+1});}
                 catch{videoPath=null;VideoState="idle";throw;}break;
@@ -628,7 +670,8 @@ public partial class StudioViewModel : ObservableObject, IDisposable
             case "import":{var files=UserDialogs.Files("导入图片和相邻 YOLO 标签","图片|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.webp",true);if(files.Length>0)await Import(files);break;}
             case "merge":{var folder=UserDialogs.Folder("合并素材文件夹");if(folder is not null)await Import([folder]);break;}
             case "save":await Save();break;
-            case "confirm":await ConfirmNext();break;
+            case "confirm":await Confirm();break;
+            case "confirm-next":await ConfirmNext();break;
             case "accept-all":
             {
                 if(transitioning||Busy||videoPath is not null)break;
@@ -717,22 +760,11 @@ public partial class StudioViewModel : ObservableObject, IDisposable
             case "train":if(!await Save())return;if(Imgsz%32!=0)throw new InvalidOperationException("输入尺寸必须为 32 的倍数");await Start("train",new(){["model"]=SelectedModel,["params"]=TrainParams(),["dataset_version"]=SelectedVersion});break;
             case "train-resume":{if(!await Save())return;var checkpoint=LatestCheckpoint();if(checkpoint is null)throw new InvalidOperationException("没有找到 last.pt 检查点，无法续训");await Start("train",new(){["model"]=SelectedModel,["params"]=TrainParams(),["dataset_version"]=SelectedVersion,["resume"]=checkpoint});break;}
             case "gate":{
-                var gateModel=UserDialogs.Files("选择候选模型权重","模型|*.pt;*.onnx;*.engine;*.torchscript").FirstOrDefault();
-                if(gateModel is null)break;
-                var golden=UserDialogs.Folder("选择冻结基准集 golden 目录（数据集版本文件夹，或其中 dataset.yaml / manifest.csv）");
-                if(golden is null)break;
-                string? baseline=null;
-                if(UserDialogs.Confirm("是否同时对比基线模型（类表前缀校验 + 逐类 AP50 跌幅）？"))
-                    baseline=UserDialogs.Files("选择基线模型权重（取消则跳过）","模型|*.pt;*.onnx;*.engine").FirstOrDefault();
-                string? quantized=null;
-                if(UserDialogs.Confirm("是否校验量化模型掉点？"))
-                    quantized=UserDialogs.Files("选择量化模型权重（取消则跳过）","量化模型|*.onnx;*.engine").FirstOrDefault();
-                var threshold=UserDialogs.Form("门禁阈值",new(){["mAP50 下限"]="0.50",["逐类 AP50 最大跌幅"]="0.03",["量化最大掉点"]="0.02"});
-                if(threshold is null)break;
-                await Start("gate",new Dictionary<string,object>{["model"]=gateModel,["golden"]=golden,["baseline"]=baseline??"",["quantized"]=quantized??"",
-                    ["map50_min"]=double.Parse(threshold["mAP50 下限"]),
-                    ["ap50_drop_max"]=double.Parse(threshold["逐类 AP50 最大跌幅"]),
-                    ["quant_drop_max"]=double.Parse(threshold["量化最大掉点"])});break;
+                var gate=UserDialogs.Gate();if(gate is null)break;
+                await Start("gate",new Dictionary<string,object>{["model"]=gate["候选模型权重"],["golden"]=gate["冻结基准集 golden 目录"],
+                    ["baseline"]=gate["基线模型权重（留空跳过）"],["quantized"]=gate["量化模型权重（留空跳过）"],
+                    ["map50_min"]=double.Parse(gate["mAP50 下限"]),["ap50_drop_max"]=double.Parse(gate["逐类 AP50 最大跌幅"]),
+                    ["quant_drop_max"]=double.Parse(gate["量化最大掉点"])});break;
             }
             case "model-browse":{var f=UserDialogs.Files("选择 YOLO 模型","模型|*.pt;*.onnx;*.engine;*.torchscript;*.xml");if(f.Length>0){Models.Add(f[0]);SelectedModel=f[0];}break;}
             case "sam-browse":{var f=UserDialogs.Files("选择 SAM2 权重","权重|*.pt");if(f.Length>0){SamModels.Add(f[0]);SelectedSam=f[0];}break;}
@@ -743,7 +775,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
             case "export-params":{var p=UserDialogs.Parameters("模型导出参数",exportParams);if(p is not null)exportParams=p;break;}
             case "export":{var p=exportParams.Where(x=>ExportFormat=="onnx"||x.Key is "imgsz" or "batch" or "dynamic").ToDictionary();p["quantize"]=int.Parse(Precision);p["device"]=ExportFormat=="engine"||Precision=="16"?"0":"cpu";await Start("export",new(){["model"]=SelectedModel,["format"]=ExportFormat,["params"]=p});break;}
             case "video-start":
-                if(Busy){if(taskKind!="tracking"||VideoState is "waiting" or "starting")return;if(VideoState=="paused"){if(!await ResolveCandidate())return;if(GetNextId()>32)throw new InvalidOperationException("最多 32 个终身目标 ID");waitingAction="commit";await bridge.Call("task.control",new{project=Project,control=new{action="commit",pause_token=pauseToken,frame=Frame,targets=GetBoxes().Select(b=>new{id=b.TargetId,cls=b.ClassId,object_id=b.ObjectId,box=new[]{b.X1,b.Y1,b.X2,b.Y2},polygons=b.Polygons,holes=b.Holes}),next_id=GetNextId()}});}else{waitingAction="pause";await bridge.Call("task.control",new{project=Project,control=new{action="pause"}});}VideoState="waiting";}
+                if(Busy){if(taskKind!="tracking"||VideoState is "waiting" or "starting")return;if(VideoState=="paused"){if(!await ResolveCandidate())return;if(GetBoxes().Count>32)throw new InvalidOperationException("同时跟踪的目标超过 32 个；已结束的目标会释放名额");waitingAction="commit";await bridge.Call("task.control",new{project=Project,control=new{action="commit",pause_token=pauseToken,frame=Frame,targets=GetBoxes().Select(b=>new{id=b.TargetId,cls=b.ClassId,object_id=b.ObjectId,box=new[]{b.X1,b.Y1,b.X2,b.Y2},polygons=b.Polygons,holes=b.Holes}),next_id=GetNextId()}});}else{waitingAction="pause";await bridge.Call("task.control",new{project=Project,control=new{action="pause"}});}VideoState="waiting";}
                 else{if(!await Save())return;var video=videoPath??throw new InvalidOperationException("请先选择视频");if(GetBoxes().Count==0){Go(PageAnnotation);Status="请先在当前帧画出目标，然后点“启动追踪”";break;}VideoState="starting";await Start("tracking",new(){["video"]=video,["frame_step"]=FrameStep,["targets"]=GetBoxes().Select(b=>new{id=b.TargetId,cls=b.ClassId,object_id=b.ObjectId,box=new[]{b.X1,b.Y1,b.X2,b.Y2},polygons=b.Polygons,holes=b.Holes}).ToArray(),["next_id"]=GetNextId(),["start_frame"]=Frame,["model"]=SelectedSam,["imgsz"]=SamSize,["device"]=Device});}break;
             case "video-finish-review":
                 if(!Busy||taskKind!="tracking")return;
@@ -779,7 +811,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
             case "project-folder":OpenFolder(Project);break;
             case "settings-save":await bridge.Call("settings.save",new{settings=new{brand=Brand,logo=LogoPath,sam_imgsz=SamSize},preferences=new{acrylic=Acrylic,show_home=ShowHomeAtStartup}});MaterialChanged?.Invoke();Status="设置已保存";break;
             case "logo":LogoPath=UserDialogs.Files("选择应用图标","图片|*.png;*.jpg;*.ico").FirstOrDefault()??LogoPath;break;
-            case "restart":if(Busy)throw new InvalidOperationException("请先停止当前任务");bridge.Dispose();bridge.Start();if(Project.Length>0)await bridge.Call("project.open",new{path=Project});Status="后端已重启；可以重试保存";break;
+            case "restart":if(Busy)throw new InvalidOperationException("请先停止当前任务");bridge.Dispose();bridge.Start();if(Project.Length>0)await bridge.Call("project.open",new{path=Project});BackendDown=false;Status="后端已重启；可以重试保存";break;
             default:if(action is not null)CanvasAction?.Invoke(action);break;
         }
     });

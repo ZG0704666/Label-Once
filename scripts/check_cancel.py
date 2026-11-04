@@ -12,7 +12,7 @@ project=Project(root/'acceptance/验证项目');store=DatasetStore(project)
 run=project.new_run('cancel_acceptance')
 task=dict(kind='train',run=str(run),project=str(project.root),model=str(root/'models/yolov8n.pt'),dataset=str(store.yaml_path()),dataset_version=store.active(),params=dict(epochs=50,batch=2,imgsz=64,device='cpu',workers=0,amp=False,plots=False))
 save_json(run/'task.json',task)
-command=[str(root/'dist/YoloTrainStudio/YoloTrainStudio.exe'),'--worker'] if '--frozen' in sys.argv else [sys.executable,'-m','studio.worker']
+command=[sys.executable,'-m','studio.worker']
 with (run/'process.log').open('w',encoding='utf-8') as log:
     process=subprocess.Popen(command+[str(run/'task.json')],stdout=log,stderr=log)
     deadline=time.monotonic()+120

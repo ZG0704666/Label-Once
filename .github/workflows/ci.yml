@@ -34,12 +34,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # 测试使用假模型替身（tests/ 中的 FakeYOLO / sys.modules stub），
-          # 不导入 ultralytics / torch，因此无需安装体积巨大的 ML 运行时。
-          python -m pip install pytest PyQt5 numpy opencv-python Pillow PyYAML
+          # 不导入 ultralytics / torch / PyQt5，因此无需安装体积巨大的 ML 运行时。
+          python -m pip install pytest numpy opencv-python Pillow PyYAML
 
       - name: Run Python tests
-        env:
-          QT_QPA_PLATFORM: offscreen
         run: python -m pytest -q
 
   dotnet-build:
@@ -64,7 +62,7 @@ jobs:
         run: dotnet build LabelOnce.sln --configuration Release --no-restore
 
   package-windows:
-    name: Package Windows release
+    name: Build WPF (release smoke)
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     needs:
       - python-tests
@@ -82,20 +80,23 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # WPF-only artifact: proves the desktop build publishes and runs self-contained.
+      # The shippable release (backend.exe + models/sam weights) is produced on a
+      # machine with the labelonce conda env via desktop/scripts/build.ps1.
       - name: Publish desktop application
         run: >
           dotnet publish desktop/LabelOnce.Desktop/LabelOnce.Desktop.csproj
           --configuration Release
           --runtime win-x64
           --self-contained true
-          --output Release/LabelOnce-win-x64
+          --output Release/LabelOnce-wpf-win-x64
 
       - name: Create release archive
-        run: Compress-Archive -Path Release/LabelOnce-win-x64/* -DestinationPath Release/LabelOnce-win-x64.zip
+        run: Compress-Archive -Path Release/LabelOnce-wpf-win-x64/* -DestinationPath Release/LabelOnce-wpf-win-x64.zip
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LabelOnce-win-x64
-          path: Release/LabelOnce-win-x64.zip
+          name: LabelOnce-wpf-win-x64
+          path: Release/LabelOnce-wpf-win-x64.zip
           if-no-files-found: error

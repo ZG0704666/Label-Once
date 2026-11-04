@@ -98,7 +98,7 @@ def test_circle_is_reduced_with_pixel_error_bound():
     assert np.count_nonzero(rebuilt&mask)/np.count_nonzero(rebuilt|mask)>=.99
 
 
-def test_keyframe_association_rejects_ambiguous_objects(tmp_path):
+def test_keyframe_association_soft_fails_on_ambiguous_objects(tmp_path):
     from studio.tracking_backfill import SampleBackfill
     from studio.domain import Box
     backfill=SampleBackfill.__new__(SampleBackfill)
@@ -108,8 +108,35 @@ def test_keyframe_association_rejects_ambiguous_objects(tmp_path):
     box=Box(0,.1,.1,.4,.4,polygons=[ring])
     backfill.project.labels.save('frame',[box])
     targets={7:dict(cls=0,object_id='stable')}
-    assert backfill.human_keyframes(targets,0)[2][7]['object_id']=='stable'
-    with pytest.raises(ValueError):
-        backfill.human_keyframes({**targets,8:dict(cls=0)},0)
+    frames,skipped=backfill.human_keyframes(targets,0)
+    assert frames[2][7]['object_id']=='stable'
+    assert skipped=={}
+    frames,skipped=backfill.human_keyframes({**targets,8:dict(cls=0)},0)
+    assert frames=={} and skipped[2]  # 关联歧义：警告跳过而非中断跟踪
     box.target_id=7;backfill.project.labels.save('frame',[box])
-    assert 7 in backfill.human_keyframes({**targets,8:dict(cls=0)},0)[2]
+    frames,skipped=backfill.human_keyframes({**targets,8:dict(cls=0)},0)
+    assert 7 in frames[2]
+
+
+def test_commit_and_class_edits_work_while_gpu_keep_alive(tmp_path):
+    service=StudioService();service.project=Project(tmp_path/'项目 空格')
+    run=tmp_path/'run';run.mkdir()
+    service.tasks.task={'kind':'tracking','run':str(run)}
+    service.tasks._busy=True
+    save_json(run/'frame_manifest.json',dict(state='paused',pause_token='current',gpu_released=False,
+                                             preview=str(run/'frame.jpg')))
+    try:
+        # 默认 GPU 常驻（未释放显存）：提交纠偏与暂停期建类都放行；只有单图 SAM 才要求显存已释放。
+        created=service.dispatch('classes.ensure',dict(project=str(service.project.root),name='新类',
+                                                       pause_token='current'))
+        assert created['created'] is True
+        with pytest.raises(ValueError):
+            service.paused_source(dict(pause_token='current'))
+        result=service.dispatch('task.control',dict(project=str(service.project.root),control={
+            'action':'finish_review','pause_token':'current','frame':3,'targets':[]}))
+        assert result['accepted']
+        with pytest.raises(ValueError):
+            service.dispatch('task.control',dict(project=str(service.project.root),control={
+                'action':'finish_review','pause_token':'stale','frame':3,'targets':[]}))
+    finally:
+        service.tasks._busy=False;service.close()

@@ -30,15 +30,22 @@ class StudioService:
             raise RuntimeError('请先等待当前任务完成或停止')
         return self.project
 
-    def paused_source(self, params):
+    def paused_session(self, params):
         task=self.tasks.task or {}
         if not self.tasks.busy or task.get('kind') != 'tracking':
             raise ValueError('没有已暂停的跟踪任务')
         run=Path(task['run'])
         state=read_json(run/'frame_manifest.json', {})
-        if (state.get('state') != 'paused' or not state.get('gpu_released') or
-            not params.get('pause_token') or params['pause_token'] != state.get('pause_token') or
+        if (state.get('state') != 'paused' or not params.get('pause_token') or
+            params['pause_token'] != state.get('pause_token') or
             (run/'control.json').exists()):
+            raise ValueError('请等待跟踪确认暂停')
+        return run
+
+    def paused_source(self, params):
+        run=self.paused_session(params)
+        state=read_json(run/'frame_manifest.json', {})
+        if not state.get('gpu_released'):
             raise ValueError('请等待跟踪确认暂停并释放模型')
         return Path(state['preview'])
 
@@ -98,7 +105,7 @@ class StudioService:
 
     def dispatch(self, method, params):
         if method == 'hello':
-            return dict(protocol=1, capabilities=['review.batch', 'review.pending', 'review.reject', 'progress.frame_counts', 'task.control.supersedes'],
+            return dict(protocol=1, capabilities=['review.batch', 'review.pending', 'review.reject', 'progress.frame_counts'],
                         settings=settings(), preferences=read_json(CONFIG_ROOT/'wpf.json', {}),
                         models=model_paths(), sam_models=model_paths(True), advanced=ADVANCED, augments=AUGMENTS)
         if method == 'settings.save':
@@ -117,7 +124,7 @@ class StudioService:
             p.assert_unique_stems()
             self.project = p
             cfg = settings()
-            cfg['recent'] = [str(p.root)]+[r for r in cfg.get('recent', []) if r != str(p.root)][:9]
+            cfg['recent'] = [str(p.root)]+[r for r in cfg.get('recent', []) if r != str(p.root) and Path(r).exists()][:9]
             save_settings(cfg)
             return self.snapshot()
         if method == 'task.cancel':
@@ -192,7 +199,7 @@ class StudioService:
                 for ring in b.raw_polygons:
                     contour=np.asarray(ring,dtype=np.float32)*[w,h]
                     from .contour_simplification import simplify_ring
-                    reduced=simplify_ring(contour,epsilon)
+                    reduced=simplify_ring(contour,epsilon,32)
                     simplified.append([[float(x/w),float(y/h)] for x,y in reduced] if len(reduced)>=3 else ring)
                 b.polygons=simplified
             return dict(boxes=[asdict(b) for b in boxes])
@@ -261,7 +268,7 @@ class StudioService:
         if method == 'classes.ensure':
             if self.tasks.busy and (self.tasks.task or {}).get('kind') != 'tracking':
                 raise RuntimeError('后台任务运行中，请等待完成或停止后再修改类别')
-            if self.tasks.busy:self.paused_source(params)
+            if self.tasks.busy:self.paused_session(params)
             name = params.get('name')
             if not isinstance(name, str) or not name.strip() or '\n' in name or '\r' in name:
                 raise ValueError('类别名称不能为空或包含换行')
@@ -360,7 +367,7 @@ class StudioService:
             return self._video_frame(params['frame'])
         if method == 'task.control':
             if params['control'].get('action') in ('commit','resume','finish_review'):
-                self.paused_source(params['control'])
+                self.paused_session(params['control'])
                 self.sam.close()
             return self.tasks.control(params['control'])
         if method == 'task.restore':

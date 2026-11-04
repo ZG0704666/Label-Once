@@ -8,7 +8,7 @@ from ultralytics.utils import ASSETS
 from studio.domain import save_json,unique_id
 from studio.worker import Worker
 from studio.tracking import Sam2Backend
-root=Path(__file__).resolve().parents[1];out=root/'acceptance'/'sam';out.mkdir(exist_ok=True)
+root=Path(__file__).resolve().parents[1];out=root/'acceptance'/'sam';out.mkdir(parents=True,exist_ok=True)
 image=cv2.imread(str(ASSETS/'zidane.jpg'));image=cv2.resize(image,(640,360));cv2.imencode('.jpg',image)[1].tofile(out/'input.jpg')
 video=out/'pair.mp4';writer=cv2.VideoWriter(str(video),cv2.VideoWriter_fourcc(*'mp4v'),10,(640,360))
 for i in range(12):writer.write(image)
@@ -23,8 +23,10 @@ frames=[]
 for i in range(4):
     idx,im,masks=backend.next_frame();assert idx==i;assert set(masks)=={2,7};frames.append(dict(frame=idx,ids=list(masks)))
 backend.correct_current(str(video),3,targets)
-idx,im,masks=backend.next_frame();assert idx==3 and set(masks)=={2,7}
+# 同一目标集合：走“会话内纠偏”（不重启流），dst 计数继续 → 下一帧是 4；
+idx,im,masks=backend.next_frame();assert idx==4 and set(masks)=={2,7}
 backend.correct_current(str(video),4,{7:targets[7],12:targets[2]})
+# 目标集合变化（ID 2→12）：回退 start_segment 完整重启于第 4 帧
 idx,im,masks=backend.next_frame();assert idx==4 and set(masks)=={7,12}
 backend.close();save_json(out/'backend_results.json',dict(frames=frames,correct=True,add_end=True))
 task=dict(kind='tracking',run=str(out/('tracking_'+unique_id())),video=str(video),model=model,device='0',imgsz=1024,interval=.2,classes=['person'],targets=[dict(id=0,cls=0,box=[70/640,75/360,300/640,355/360]),dict(id=1,cls=0,box=[365/640,15/360,580/640,355/360])],quality=dict(min_area_ratio=.01,max_area_ratio=100,min_iou=0,max_center_distance_ratio=100,max_frame_area_ratio=1.))

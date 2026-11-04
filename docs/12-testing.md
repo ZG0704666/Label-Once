@@ -14,8 +14,7 @@ Label Once 的验证分为四层：
 ### 1.1 运行
 
 ```powershell
-python -m pip install pytest PyQt5 numpy opencv-python Pillow PyYAML
-$env:QT_QPA_PLATFORM = "offscreen"
+python -m pip install pytest numpy opencv-python Pillow PyYAML
 python -m pytest -q
 ```
 
@@ -29,18 +28,15 @@ CI 使用同一套最小依赖，详见 [构建、打包与 CI](./11-build-relea
 | --- | --- |
 | `test_domain.py` | Labels/Project 往返、旧格式、类别重排、mask 边界、成对重命名、数据集确定性/增量、质量门 |
 | `test_bridge.py` | JSONL 协议、UTF-8、错误帧、EXIF 保存/确认、失败不确认、过期项目、无 Qt 依赖、worker 错误/取消、单任务、强制停止、坏事件 |
-| `test_gui.py` | Qt 窗口、标注、导航、视频页、SAM 结果过滤 |
-| `test_workspace.py` | 工作区导入/映射/待复审、任务恢复/完成/失败 |
 | `test_prelabel.py` | 零检测替换会清空旧标签 |
-| `test_review_workflow.py` | 导入→复核→训练、非法导入、手动抽帧、画布目标/历史/只读、真实用户输出导入、旧预览 |
+| `test_review_workflow.py` | 导入→复核→训练、非法导入、手动抽帧、真实用户输出导入 |
 | `test_training_pipeline.py` | 分组划分、确定性、导入批次同组、增强参数、预设往返、AdamW 固定、训练参数传递、续训 |
 | `test_segmentation_workflow.py` | 像素往返/复核/分割导出、投影修复/外部冲突、回填保护、未变保存、拓扑门禁、ROI、时间戳抽帧/取消、帧间隔预设、VFR |
 | `test_video_pipeline.py` | 抽帧端到端、取消事件、stderr 日志、视频导入批次、重导入恢复、待复审报告、复核 schema v2 |
 | `test_merge.py` | 新类确认、外部 ID 重映射、统一重划、比例约束、缺标签负样本、黑名单 yaml、stem 冲突、内容去重、golden 固定 val、大小写冲突、分割保留、跨项目只读、pending/rejected 排除、别名记忆、同名同内容去重 |
 | `test_release_gate.py` | names 兼容、标签格式、类别对齐、基线前缀、泄漏、mAP 下限、缺基线 warning |
-| `test_navigation_segments.py` | 轮廓持久化、按住的键释放/焦点、视频导航草稿/起始帧、F 只确认画布且不重复 |
+| `test_annotation_geometry.py` | 轮廓持久化、类别重排后轮廓不变、外部 TXT 改动触发冲突 |
 | `test_interactive_workflow.py` | 追加类别保留 ID、暂停令牌/GPU 释放、finish_review 令牌、草稿隔离、轮廓简化、关键帧关联歧义 |
-| `test_task_manager_compatibility.py` | Qt TaskManager 完成语义、取消标记、日志尾随 |
 
 ### 1.3 假模型注入
 
@@ -68,8 +64,6 @@ class FakeYOLO:
 
 | 失败 | 原因 | 处理 |
 | --- | --- | --- |
-| `ModuleNotFoundError: PyQt5` | 缺测试依赖 | 安装 PyQt5 |
-| `could not load the Qt platform plugin "windows"` | 无显示环境 | 设置 `QT_QPA_PLATFORM=offscreen` |
 | `WinError 1114 ... c10.dll` | 测试仍在导入真实 ultralytics/torch | 确认测试使用假模块；更新到包含修复的版本 |
 | 临时目录中文路径失败 | 系统编码/权限 | 使用 UTF-8、避免受控目录 |
 | 测试残留进程 | 上次取消未清理 | 检查任务目录 `cancel`，必要时 `taskkill` |
@@ -101,7 +95,7 @@ dotnet run --project desktop/LabelOnce.Core.Tests -c Release
 
 - 页面切换与画布渲染；
 - 打开项目、导入、绘框、保存；
-- 快捷键（W/Esc/F/A/D/Delete/Ctrl+Z 等）；
+- 快捷键（W/Esc/F/A/D/Delete/Ctrl+Z 等；`F` 确认停留，“完成并下一张”负责跳转，双 `Esc` 快速放弃候选，`Enter` 确认候选类别）；
 - SAM 结果应用/丢弃；
 - 视频暂停/纠偏/提交；
 - 截图输出与错误捕获。
@@ -135,16 +129,11 @@ dotnet run --project desktop/LabelOnce.Core.Tests -c Release
 | --- | --- |
 | `scripts/acceptance.py` | 后端端到端验收 |
 | `scripts/check_workflow.py` | 标注/训练工作流冒烟 |
-| `scripts/check_workspace.py` / `check_workspace_layout.py` | 工作区与布局 |
 | `scripts/check_release_gate.py` | 发布门禁（也可作为验收） |
 | `scripts/check_sam.py` | SAM 单图分割 |
 | `scripts/check_interactive_pause.py` | 交互暂停/恢复 |
 | `scripts/check_progressive_gpu.py` | SAM 多提示、ROI、抽帧、SAM2 纠偏/回填（GPU 验证） |
-| `scripts/check_navigation_segments.py` | 导航与轮廓 |
-| `scripts/check_f_shortcut.py` | F 快捷键 |
 | `scripts/check_cancel.py` | 取消语义 |
-| `scripts/check_layout.py` | UI 布局 |
-| `scripts/check_frozen*.py` | 冻结后端/工作流/引擎探测 |
 | `desktop/scripts/acceptance_backend.py` | 裸后端验收 |
 | `desktop/scripts/acceptance_frozen.py` | 发布目录隔离验收 |
 | `desktop/scripts/acceptance_frozen_progressive.py` | 发布目录渐进式验收 |
@@ -159,7 +148,7 @@ dotnet run --project desktop/LabelOnce.Core.Tests -c Release
 | 项目 | CI | 本地完整环境 |
 | --- | --- | --- |
 | Python | 3.10 | 3.10 |
-| 测试依赖 | pytest/PyQt5/numpy/opencv/Pillow/PyYAML | 同左 + torch/ultralytics 等 |
+| 测试依赖 | pytest/numpy/opencv/Pillow/PyYAML | 同左 + torch/ultralytics 等 |
 | ultralytics | 不安装 | 安装（真实训练/导出需要） |
 | GPU | 无 | 可选 |
 | 模型权重 | 无 | 需要 |

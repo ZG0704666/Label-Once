@@ -20,7 +20,7 @@ def _simple(poly):
     return True
 
 
-def simplify_ring(points, epsilon=1.0):
+def simplify_ring(points, epsilon=1.0, max_points=None):
     arr=np.asarray(points,dtype=np.float32).reshape(-1,2)
     if len(arr)<4:return arr.tolist()
     origin=np.floor(arr.min(axis=0)).astype(int)-4
@@ -44,6 +44,7 @@ def simplify_ring(points, epsilon=1.0):
         if len(reduced)<3:continue
         candidates.append((len(reduced),float(value),reduced))
     checked=set()
+    valid=[]
     for _,value,reduced in sorted(candidates,key=lambda t:(t[0],t[1])):
         key=reduced.tobytes()
         if key in checked:continue
@@ -62,5 +63,10 @@ def simplify_ring(points, epsilon=1.0):
             a=raw[protected];b=trial[protected]
             if np.count_nonzero(a&b)/max(1,np.count_nonzero(a|b))<.98:continue
             if abs(int(a.sum())-int(b.sum()))/max(1,int(a.sum()))>.02:continue
-        return reduced.tolist()
+        valid.append((len(reduced),value,reduced))
+    if valid:
+        if max_points is not None:
+            fitting = [candidate for candidate in valid if candidate[0] <= max_points]
+            return (fitting[0] if fitting else valid[0])[2].tolist()
+        return valid[0][2].tolist()
     return arr.tolist()

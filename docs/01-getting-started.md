@@ -52,8 +52,7 @@ python -m pip check
 测试通过 `sys.modules` 注入假的 `ultralytics` 模块，因此**不需要安装 torch/ultralytics**：
 
 ```powershell
-python -m pip install pytest PyQt5 numpy opencv-python Pillow PyYAML
-$env:QT_QPA_PLATFORM = "offscreen"
+python -m pip install pytest numpy opencv-python Pillow PyYAML
 python -m pytest -q
 ```
 
@@ -85,15 +84,15 @@ python -m pytest -q
 
 ## 4. 启动方式
 
-### 4.1 源码启动 PyQt5 界面（旧入口，仍保留）
+### 4.1 源码启动后端桥接
+
+桌面端会自动拉起后端；如需手动调试后端：
 
 ```powershell
-python launch.py
-# 等价于
-python -m studio.app
+python -m studio.bridge
 ```
 
-`launch.py` 除了 GUI，还承担 worker/DDP 子进程入口的分发，详见 [架构总览](./02-architecture.md)。
+worker/DDP 子进程入口在 `backend_launch.py`，详见 [架构总览](./02-architecture.md)。
 
 ### 4.2 源码启动 WPF 桌面端（当前主界面）
 
@@ -152,10 +151,8 @@ Label Once/
 ├── sam/                # 本地 SAM/SAM2 权重（忽略提交）
 ├── train/              # 训练产物目录
 ├── Release/            # 本地发布产物（忽略提交）
-├── launch.py           # Qt GUI / worker / DDP 启动入口
 ├── backend_launch.py   # 冻结后端 / worker 启动入口
-├── Backend.spec        # 后端 PyInstaller 配置
-└── YoloTrainStudio.spec# Qt 版 PyInstaller 配置
+└── Backend.spec        # 后端 PyInstaller 配置
 ```
 
 ---

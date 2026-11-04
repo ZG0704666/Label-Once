@@ -20,7 +20,7 @@ try:
     opts=dict(video_session=opened['session'],frame=0,model=str(ROOT/'sam'/'sam2_t.pt'),device='0',imgsz=1024,class_id=0,object_id='person-id',request=1,points=[[200,180]],labels=[1],bbox=[70,75,310,355],epsilon=1)
     first=service.dispatch('sam.segment',opts)['box'];assert first['polygons']
     target=dict(id=7,cls=0,object_id='person-id',box=[first[k] for k in ('x1','y1','x2','y2')],polygons=first['polygons'],holes=first['holes'])
-    task=service.dispatch('task.start',{'kind':'tracking','options':dict(video=str(video),model=opts['model'],device='0',imgsz=1024,interval=.2,start_frame=0,targets=[target],next_id=8,quality=dict(min_area_ratio=.001,max_area_ratio=1000,min_iou=0,max_center_distance_ratio=100,max_frame_area_ratio=1))})
+    task=service.dispatch('task.start',{'kind':'tracking','options':dict(video=str(video),model=opts['model'],device='0',imgsz=1024,interval=.2,start_frame=0,gpu_keep_alive=False,targets=[target],next_id=8,quality=dict(min_area_ratio=.001,max_area_ratio=1000,min_iou=0,max_center_distance_ratio=100,max_frame_area_ratio=1))})
     deadline=time.monotonic()+120
     while not any(e.get('event')=='tracking_frame' for e in events):
         assert time.monotonic()<deadline,events[-5:];time.sleep(.05)

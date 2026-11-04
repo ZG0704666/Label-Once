@@ -42,18 +42,33 @@ class SampleBackfill:
         return True
 
     def human_keyframes(self, targets, start):
-        """Associate human masks only through IDs or unique class instances."""
+        """Associate human masks only through IDs or unique class instances.
+
+        软失败：无法安全关联的目标不抛异常，而是记录原因并跳过——跟踪继续，
+        由失败分级在真正出问题时把现场交给用户。strict_keyframes 的调用方
+        在 run_tracking 中根据返回的 skipped 再决定是否中止。
+        """
         frames = {}
+        skipped = {}
         for frame, name in sorted(self.samples.items()):
             if frame <= start: continue
             human = [b for b in self.project.labels.load(Path(name).stem) if b.origin != 'AI' and b.polygons]
             mapped = {}
+            reasons = []
             for box in human:
                 candidates = [i for i,t in targets.items() if t['cls'] == box.cls]
                 if box.target_id in candidates: target_id = box.target_id
                 elif len(candidates)==1 and sum(b.cls==box.cls for b in human)==1: target_id = candidates[0]
-                else: raise ValueError(f'关键帧 {name} 存在无法安全关联的目标，请保持一致目标 ID')
-                if target_id in mapped: raise ValueError(f'关键帧 {name} 的目标 ID 重复')
+                elif not candidates:
+                    reasons.append(f'目标 {box.cls} 在跟踪会话中不存在对应 ID')
+                    continue
+                else:
+                    reasons.append(f'目标 {box.cls} 有多个同类别候选，无法安全关联')
+                    continue
+                if target_id in mapped:
+                    reasons.append(f'目标 {box.cls} 的 ID {target_id} 重复映射，忽略后到者')
+                    continue
                 mapped[target_id] = dict(cls=box.cls, box=[box.x1,box.y1,box.x2,box.y2], polygons=box.polygons, holes=box.holes, object_id=targets[target_id].get('object_id'))
             if mapped: frames[frame] = mapped
-        return frames
+            if reasons: skipped[frame] = reasons
+        return frames, skipped

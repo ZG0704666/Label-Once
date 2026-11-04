@@ -73,7 +73,6 @@ git status --short
 提交前至少运行：
 
 ```powershell
-$env:QT_QPA_PLATFORM = "offscreen"
 python -m pytest -q
 dotnet run --project desktop/LabelOnce.Core.Tests -c Release
 ```

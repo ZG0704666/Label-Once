@@ -39,7 +39,8 @@ def save_json(path, value):
 
 def read_json(path, default=None):
     path = Path(path)
-    return json.loads(path.read_text(encoding='utf-8')) if path.exists() else default
+    # 用 utf-8-sig 读取：容忍外部编辑器/进程写入的 BOM，否则 json.loads 会因 BOM 报错
+    return json.loads(path.read_text(encoding='utf-8-sig')) if path.exists() else default
 
 
 def digest(path):
@@ -269,7 +270,7 @@ def mask_box(mask, cls=0, epsilon=1.):
         if len(contour)<3:
             continue
         original = [[float(px/w),float(py/h)] for px,py in contour.reshape(-1,2)]
-        simplified = [[float(px/w),float(py/h)] for px,py in simplify_ring(contour.reshape(-1,2), epsilon)]
+        simplified = [[float(px/w),float(py/h)] for px,py in simplify_ring(contour.reshape(-1,2), epsilon, max_points=32)]
         if len(simplified)<3:
             simplified=original
         if hierarchy[0][i][3] >= 0:

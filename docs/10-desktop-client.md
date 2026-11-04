@@ -60,7 +60,7 @@ desktop/
 | 快捷键 | 行为 |
 | --- | --- |
 | `W` | 绘框 |
-| `Esc` | 选择模式 |
+| `Esc` | 选择模式（有候选时先弹三选一；连按两次快速放弃候选；多边形 ≥3 点时先闭合） |
 | `R` | 适配视图 |
 | 滚轮 | 以鼠标为中心缩放 |
 | 中键拖动 / 空格拖动 | 平移 |
@@ -69,7 +69,7 @@ desktop/
 | `Ctrl+Z` / `Ctrl+Y` | 撤销/重做 |
 | 方向键 | 微调 |
 | `A` / `D`（按住） | 连续上一张/下一张，松开停止 |
-| `F` | 保存 + 确认 + 下一张 |
+| `F` | 保存 + 确认（停留当前图片；跳到下一张用工具栏“完成并下一张”） |
 | `P` | 多边形绘制，双击完成 |
 | 双击轮廓边 | 插入顶点 |
 | `Q` | 添加 SAM 前景点 |
@@ -181,15 +181,13 @@ desktop/
 
 ---
 
-## 10. 旧 Qt 界面
+## 10. 后端协议
 
-`studio/app.py` 是保留的 PyQt5 界面，与 WPF 共享 `StudioService`/`ProcessManager` 协议。启动：
+WPF 与后端通过 `StudioService`/`ProcessManager` 协议通信，协议由 `studio/bridge.py` 承载。需要脱离桌面端调试后端时：
 
 ```powershell
-python launch.py
+python -m studio.bridge
 ```
-
-Qt 版适合无 .NET 环境或快速调试后端；功能入口以 WPF 为准。
 
 ---
 

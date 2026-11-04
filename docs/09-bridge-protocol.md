@@ -96,7 +96,7 @@ Ultralytics 等库可能在导入/推理时给 logger 挂 `StreamHandler(sys.std
 | `progress` | `value`、`text`、可选 `frame/total/exported` | 通用进度 0–1 |
 | `epoch` | `epoch`、`metrics` | 训练每轮指标 |
 | `log` | `message` / `data` | 日志/提示 |
-| `tracking_state` | `state`、`targets`、`frame`、`pause_token`、`gpu_released` | 跟踪状态 |
+| `tracking_state` | `state`、`targets`、`frame`、`pause_token`、`gpu_released` | 跟踪状态（`gpu_released` 在暂停常驻期间为 false，释放后才转 true） |
 | `tracking_frame` | `frame`、`path`、`boxes`、`targets` | 跟踪预览 |
 | `result` | `result` | 任务成功结果 |
 | `error` | `message`、`traceback` | 任务失败 |
@@ -116,7 +116,7 @@ Ultralytics 等库可能在导入/推理时给 logger 挂 `StreamHandler(sys.std
 | `hello` | 返回协议版本、capabilities、settings、WPF preferences、模型路径、默认超参/增强 |
 | `settings.save` | 保存全局设置与 WPF 偏好；`sam_imgsz` 必须是 32 的倍数 |
 
-`hello` 返回的 capabilities 当前包括：`review.batch`、`review.pending`、`review.reject`、`progress.frame_counts`、`task.control.supersedes`。
+`hello` 返回的 capabilities 当前包括：`review.batch`、`review.pending`、`review.reject`、`progress.frame_counts`。
 
 ### 5.2 项目
 
@@ -203,7 +203,7 @@ Ultralytics 等库可能在导入/推理时给 logger 挂 `StreamHandler(sys.std
   - 拒绝属于旧项目的过期请求；
   - 在 `idle=True` 时拒绝忙碌状态下的修改操作。
 - 大多数写操作（导入、重命名、保存、数据集、训练等）都要求空闲；
-- 跟踪暂停时允许特定 SAM/纠偏操作，但需要 `pause_token` 与 `gpu_released` 校验；
+- 跟踪暂停时允许特定 SAM/纠偏操作，但需要 `pause_token`；要求“确已释放显存”的操作再校验 `gpu_released`（GPU 常驻期间为 false）；
 - `task.control` 同一时间只允许一条未处理的 `control.json`，避免命令堆积；
 - 取消是协作式的：worker 在循环/回调中检查 `cancel` 文件；强制取消只是兜底。
 

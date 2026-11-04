@@ -26,12 +26,11 @@ flowchart LR
 | 业务服务 | `studio/service.py` | 项目状态、标注/复核/数据集/任务编排，不导入 Qt |
 | 任务监督 | `studio/processes.py` | 启动 worker、跟踪事件、取消、控制命令 |
 | 重任务 worker | `studio/worker.py` | 延迟导入 torch/ultralytics，执行训练、推理、导出等 |
-| 旧 Qt GUI | `studio/app.py` | 保留的 PyQt5 界面，与 WPF 共享服务层 |
 | 公共领域模型 | `studio/domain.py` | `Project`、`Labels`、`Box`、原子写入 |
 
 **关键约束：**
 
-1. `studio/service.py` 与 `studio/bridge.py` 不导入 Qt，因此可被 WPF 和 PyQt5 共用，也便于无头测试。
+1. `studio/service.py` 与 `studio/bridge.py` 不导入 Qt 或任何 GUI 框架，便于无头测试与被桌面端共用。
 2. torch/ultralytics 只在 worker 的具体任务方法中延迟导入，启动桥接进程时不会加载重型 ML 运行时。
 3. 同一时刻只允许一个后台任务；项目切换、类别修改、标注保存等操作在任务忙碌时会被拒绝或要求先停止。
 
@@ -60,31 +59,18 @@ LabelOnce.exe
 
 `BridgeClient` 会向上遍历目录查找 `backend_launch.py` 以定位源码根目录；Python 解释器可通过 `LABELONCE_PYTHON` 指定，默认查找 `~/anaconda3/envs/labelonce/python.exe`。
 
-### 2.3 旧 Qt 模式
-
-```text
-python launch.py
-  └─ studio.app:main (PyQt5)
-       └─ studio.qt_tasks.TaskManager
-            └─ studio.processes.ProcessManager
-                 └─ python -m studio.worker task.json
-```
-
-Qt 版与 WPF 版共享 `ProcessManager` 的磁盘协议，因此任务目录、事件流和取消语义一致。
-
 ---
 
 ## 3. 入口分发
 
-`launch.py` 与 `backend_launch.py` 都先调用 `multiprocessing.freeze_support()`，再按参数分流：
+`backend_launch.py` 先调用 `multiprocessing.freeze_support()`，再按参数分流：
 
 | 参数 | 行为 | 用途 |
 | --- | --- | --- |
 | `--worker <task.json>` | 调用 `studio.worker.main(task_path)` | 任务子进程 |
 | `-m <module>` | `runpy.run_module` | Ultralytics DDP 等以 `sys.executable` 拉起模块的场景 |
 | `<script.py>` | `runpy.run_path` | 以当前解释器执行脚本 |
-| 无参数（`launch.py`） | `studio.app:main` | PyQt5 GUI |
-| 无参数（`backend_launch.py`） | `studio.bridge:main` | 无头 JSONL 后端 |
+| 无参数 | `studio.bridge:main` | 无头 JSONL 后端 |
 
 `ProcessManager` 在源码模式使用 `sys.executable -X utf8 -m studio.worker`，在冻结模式使用 `sys.executable --worker`。
 

@@ -1,7 +1,7 @@
 param([string]$ModelSource)
 $ErrorActionPreference='Stop'
 $sourceRoot = Split-Path $PSScriptRoot -Parent
-if (!$ModelSource) { $ModelSource = Join-Path (Split-Path (Split-Path $sourceRoot -Parent) -Parent) 'Release\TrainStudio' }
+if (!$ModelSource) { $ModelSource = Join-Path (Split-Path (Split-Path $sourceRoot -Parent) -Parent) 'Release\TrainStudio-WPF' }
 foreach ($folder in @('models','sam')) {
     $weightSource = Join-Path $ModelSource $folder
     if (!(Test-Path -LiteralPath $weightSource)) { throw "Missing model directory: $weightSource" }

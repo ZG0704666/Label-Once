@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from packaging.requirements import Requirement
 
-roots=['PyQt5','ultralytics','numpy','opencv-python','matplotlib','PyYAML','Pillow','requests','tqdm','psutil','torch','torchvision','onnx','onnxruntime','onnxslim','openvino','tensorrt-cu12','PyInstaller','pytest']
+roots=['ultralytics','numpy','opencv-python','matplotlib','PyYAML','Pillow','requests','tqdm','psutil','torch','torchvision','onnx','onnxruntime','onnxslim','openvino','tensorrt-cu12','PyInstaller','pytest']
 pending=list(roots);seen={};missing=set()
 while pending:
     name=pending.pop();key=re.sub('[-_.]+','-',name).lower()

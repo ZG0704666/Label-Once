@@ -41,7 +41,7 @@ manifest = {
     "application": "Label Once WPF", "source": source.relative_to(root).as_posix(),
     "release": release.relative_to(root).as_posix(), "entry": "Release/TrainStudio-WPF/LabelOnce.exe",
     "runtime": "Windows x64 self-contained; frozen Python backend; no Conda activation required",
-    "development": {"conda": "labelonce", "python": "3.10 x64", "dotnet_sdk": "10.0.401",
+    "development": {"conda": "labelonce", "python": "3.10 x64", "dotnet_sdk": "10.0.403",
                     "wpf_ui": "4.3.0", "communitytoolkit_mvvm": "8.4.2",
                     "torch": "2.11.0+cu128", "torchvision": "0.26.0"},
     "release_inventory_excluding_manifest": {"files": len(files), "bytes": sum(p.stat().st_size for p in files)},
@@ -51,7 +51,7 @@ manifest = {
                  "gpu": "NVIDIA GeForce RTX 5080 Laptop GPU"},
     "remaining_acceptance": ["Physical 100/125/200% DPI and mixed-DPI monitor dragging",
                               "Multi-GPU DDP, other hardware, large real datasets and long training"],
-    "qt_fallback": "Release/TrainStudio", "git_commit_push_publish": False,
+    "git_commit_push_publish": False,
     "artifacts": [record(p) for p in artifacts], "source_files": [record(p) for p in sorted(set(code))],
     "evidence": [record(p) for p in reports],
 }
