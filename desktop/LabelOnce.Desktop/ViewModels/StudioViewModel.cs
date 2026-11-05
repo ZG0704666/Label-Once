@@ -10,13 +10,6 @@ using LabelOnce.Desktop.Controls;
 using System.Windows.Media.Imaging;
 namespace LabelOnce.Desktop.ViewModels;
 
-public sealed record ImageEntry(string Name,string Path,string Status,string? Batch,string Source="")
-{
-    public string Description=>$"{Name} · {Status switch{"pending"=>"待完成","confirmed"=>"已完成","rejected"=>"已驳回",_=>"待标注"}}{Source}";
-}
-public sealed record ObjectEntry(int Index,int TargetId,string Name,string Origin);
-public sealed record Document(string Path,string Source,int Width,int Height,int Orientation,List<Annotation> Boxes,bool Video);
-
 public partial class StudioViewModel : ObservableObject, IDisposable
 {
     public const int PageHome=0,PageLibrary=1,PageAnnotation=2,PageTraining=3,PageModel=4,PageSettings=5;
