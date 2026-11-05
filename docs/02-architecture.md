@@ -121,7 +121,7 @@ runs/train_20261026_101500_ab12cd34/
 | `dataset_merge` | 多来源整合为新版本 | `studio.merge` |
 | `tracking` | SAM2 视频跟踪 | `studio.tracking` |
 | `segment_dataset` | 导出分割数据集 | `studio.segmentation` |
-| `gate` | 发布门禁 | `scripts/check_release_gate.py` |
+| `gate` | 发布门禁 | `scripts/checks/check_release_gate.py` |
 
 训练/评估会自动绑定当前激活的数据集版本，并通过 `DatasetStore.yaml_path()` 解析 `dataset.yaml`。
 

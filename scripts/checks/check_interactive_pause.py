@@ -1,7 +1,7 @@
 """GPU smoke test of the desktop service pause / interactive SAM / commit contract."""
 import sys,time,json,uuid
 from pathlib import Path
-ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
+ROOT=Path(__file__).resolve().parents[2];sys.path.insert(0,str(ROOT))
 import cv2
 from ultralytics.utils import ASSETS
 from studio.service import StudioService

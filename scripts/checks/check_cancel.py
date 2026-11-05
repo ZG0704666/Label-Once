@@ -3,11 +3,11 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from studio.domain import Project,save_json
 from studio.dataset import DatasetStore
 
-root=Path(__file__).resolve().parents[1]
+root=Path(__file__).resolve().parents[2]
 project=Project(root/'acceptance/验证项目');store=DatasetStore(project)
 run=project.new_run('cancel_acceptance')
 task=dict(kind='train',run=str(run),project=str(project.root),model=str(root/'models/yolov8n.pt'),dataset=str(store.yaml_path()),dataset_version=store.active(),params=dict(epochs=50,batch=2,imgsz=64,device='cpu',workers=0,amp=False,plots=False))

@@ -1,7 +1,7 @@
 # Direct application dependencies. Versions are pinned to match
 # requirements.lock.txt (the fully-resolved environment produced by
 # scripts/lock_environment.py). If you bump a version here, regenerate the
-# lock and keep the two in sync -- CI enforces this (see scripts/check_lock_sync.py).
+# lock and keep the two in sync -- CI enforces this (see scripts/checks/check_lock_sync.py).
 # Torch/torchvision CUDA wheels come from the cu128 index; see scripts/install.ps1.
 ultralytics==8.4.161
 numpy==2.2.6

@@ -143,15 +143,18 @@ Release/TrainStudio-WPF/LabelOnce.exe
 ```text
 Label Once/
 ├── desktop/            # .NET 10 WPF 桌面端与几何/测试项目
+├── backend/            # 冻结后端 / worker 启动入口
+│   └── backend_launch.py
 ├── studio/             # Python 后端：领域模型、服务、任务、视觉流水线
 ├── scripts/            # 安装、构建、模型准备、验收与门禁脚本
+│   ├── checks/         # check_*.py 校验脚本（lock 同步、发布门禁、GPU 验证）
+│   └── acceptance/     # acceptance_*、manifest、probe 验收与打包清单脚本
 ├── tests/              # Python 测试
 ├── docs/               # 文档中心（本目录）
 ├── models/             # 本地 YOLO 权重（忽略提交）
 ├── sam/                # 本地 SAM/SAM2 权重（忽略提交）
 ├── train/              # 训练产物目录
 ├── Release/            # 本地发布产物（忽略提交）
-├── backend_launch.py   # 冻结后端 / worker 启动入口
 └── Backend.spec        # 后端 PyInstaller 配置
 ```
 

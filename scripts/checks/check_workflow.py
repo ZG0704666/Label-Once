@@ -1,12 +1,12 @@
 """Exercise atomic paused-frame edits through the real SAM2 backend."""
 import sys
 from pathlib import Path
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 from studio.domain import save_json,read_json,unique_id,Project
 from studio.worker import Worker
 import studio.worker as protocol
 from studio.review import import_video,ReviewStore
-root=Path(__file__).resolve().parents[1];out=root/'acceptance'/'workflow';out.mkdir(exist_ok=True)
+root=Path(__file__).resolve().parents[2];out=root/'acceptance'/'workflow';out.mkdir(exist_ok=True)
 run=out/('tracking_'+unique_id())
 task=dict(kind='tracking',session='workflow',run=str(run),video=str(root/'acceptance/sam/pair.mp4'),model=str(root/'sam/sam2_t.pt'),device='0',imgsz=1024,interval=.2,classes=['person'],targets=[dict(id=0,cls=0,box=[70/640,75/360,300/640,355/360]),dict(id=1,cls=0,box=[365/640,15/360,580/640,355/360])],quality=dict(min_area_ratio=.01,max_area_ratio=100,min_iou=0,max_center_distance_ratio=100,max_frame_area_ratio=1.))
 run.mkdir();save_json(run/'task.json',task)

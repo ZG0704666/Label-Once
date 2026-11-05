@@ -32,7 +32,7 @@ artifacts = [release / name for name in ("LabelOnce.exe", "LabelOnce.dll", "Labe
               "backend/backend.exe", "README.md", "WPF_ACCEPTANCE.md", "requirements.lock.txt")]
 artifacts += sorted((release / "models").glob("*.pt")) + sorted((release / "sam").glob("*.pt"))
 code = [source / name for name in ("studio/bridge.py", "studio/service.py", "studio/processes.py",
-        "backend_launch.py", "Backend.spec", "desktop/global.json")]
+        "backend/backend_launch.py", "Backend.spec", "desktop/global.json")]
 code += [p for p in (source / "desktop").rglob("*")
          if p.is_file() and p.suffix in (".cs", ".xaml", ".csproj", ".ps1")
          and not {"obj", "bin"}.intersection(p.relative_to(source).parts)]

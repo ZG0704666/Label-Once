@@ -105,20 +105,25 @@ Label Once 旨在将数据标注、数据集清洗、训练准备、模型推理
 
 ```text
 Label Once
-├── desktop/            # WPF 桌面端，负责交互与 UI
-├── studio/             # Python 后端，负责标注、训练、评估与数据处理
-├── scripts/            # 构建、环境准备、验证脚本
-├── tests/              # 自动化测试与回归验证
-├── docs/               # 文档中心（入门、流程、协议、构建、验收）
-├── models/             # 本地模型权重目录（本地保留，不建议提交）
-├── sam/                # SAM 权重目录（本地保留，不建议提交）
-├── train/              # 训练产物与权重输出目录
-├── requirements.txt    # Python 依赖清单
+├── backend/             # 后端启动入口（冻结 / worker / 源码模式）
+│   └── backend_launch.py
+├── desktop/             # WPF 桌面端，负责交互与 UI
+├── studio/              # Python 后端，负责标注、训练、评估与数据处理
+├── scripts/             # 构建、环境准备、验证与验收脚本
+│   ├── checks/          # check_*.py 校验脚本（lock 同步、发布门禁、GPU 验证等）
+│   ├── acceptance/      # 验收与打包清单脚本（acceptance_*、manifest、probe）
+│   └── *.ps1 / *.py     # 安装、锁环境、模型准备、端到端验收
+├── tests/               # 自动化测试与回归验证
+├── docs/                # 文档中心（入门、流程、协议、构建、验收）
+├── models/              # 本地模型权重目录（本地保留，不建议提交）
+├── sam/                 # SAM 权重目录（本地保留，不建议提交）
+├── train/               # 训练产物与权重输出目录
+├── requirements.txt     # Python 依赖清单
 ├── requirements.lock.txt
-├── pyproject.toml      # Python 项目元数据
-├── README.md           # 项目说明
+├── pyproject.toml       # Python 项目元数据
+├── Backend.spec         # 后端 PyInstaller 配置
+├── README.md            # 项目说明
 ├── .gitignore          # Git 忽略规则
-├── backend_launch.py   # 后端启动入口
 └── Release/            # 本地发布目录（构建产物）
 ```
 

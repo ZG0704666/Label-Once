@@ -327,7 +327,7 @@ class Worker:
     def gate(self):
         """Run the release gate script against a frozen golden set inside this worker."""
         import importlib.util
-        script = Path(__file__).resolve().parents[1] / 'scripts' / 'check_release_gate.py'
+        script = Path(__file__).resolve().parents[1] / 'scripts' / 'checks' / 'check_release_gate.py'
         module = importlib.util.module_from_spec(importlib.util.spec_from_file_location('check_release_gate', script))
         module.__loader__.exec_module(module)
         path = lambda key: Path(self.task[key]) if self.task.get(key) else None

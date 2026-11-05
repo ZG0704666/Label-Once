@@ -28,7 +28,7 @@ public sealed class BridgeClient : IDisposable
         {
             string? source=Environment.GetEnvironmentVariable("LABELONCE_SOURCE");
             for(var dir=new DirectoryInfo(root);source is null&&dir is not null;dir=dir.Parent)
-                if(File.Exists(Path.Combine(dir.FullName,"backend_launch.py")))source=dir.FullName;
+                if(File.Exists(Path.Combine(dir.FullName,"backend","backend_launch.py")))source=dir.FullName;
             if(source is null)throw new FileNotFoundException("未找到 backend/backend.exe。请运行 desktop/scripts/start.ps1 或使用完整发布目录。");
             string python=Environment.GetEnvironmentVariable("LABELONCE_PYTHON")??Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"anaconda3","envs","labelonce","python.exe");
             info.FileName=python;info.WorkingDirectory=source;info.ArgumentList.Add("-X");info.ArgumentList.Add("utf8");info.ArgumentList.Add("-m");info.ArgumentList.Add("studio.bridge");

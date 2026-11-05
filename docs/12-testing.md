@@ -5,7 +5,7 @@ Label Once 的验证分为四层：
 1. Python 单元/集成测试（`tests/`）；
 2. .NET 几何测试（`LabelOnce.Core.Tests`）；
 3. WPF 真实窗口验收（`LabelOnce.Desktop.Tests`）；
-4. 人工/脚本验收（`scripts/check_*.py`、`desktop/scripts/acceptance_*.py`）。
+4. 人工/脚本验收（`scripts/check_*.py`、`scripts/acceptance/acceptance_*.py`）。
 
 ---
 
@@ -130,16 +130,16 @@ dotnet test desktop/LabelOnce.Core.Tests -c Release
 | 脚本 | 用途 |
 | --- | --- |
 | `scripts/acceptance.py` | 后端端到端验收 |
-| `scripts/check_workflow.py` | 标注/训练工作流冒烟 |
-| `scripts/check_release_gate.py` | 发布门禁（也可作为验收） |
-| `scripts/check_sam.py` | SAM 单图分割 |
-| `scripts/check_interactive_pause.py` | 交互暂停/恢复 |
-| `scripts/check_progressive_gpu.py` | SAM 多提示、ROI、抽帧、SAM2 纠偏/回填（GPU 验证） |
-| `scripts/check_cancel.py` | 取消语义 |
-| `desktop/scripts/acceptance_backend.py` | 裸后端验收 |
-| `desktop/scripts/acceptance_frozen.py` | 发布目录隔离验收 |
-| `desktop/scripts/acceptance_frozen_progressive.py` | 发布目录渐进式验收 |
-| `desktop/scripts/probe_frozen_engine.py` | TensorRT engine 探测 |
+| `scripts/checks/check_workflow.py` | 标注/训练工作流冒烟 |
+| `scripts/checks/check_release_gate.py` | 发布门禁（也可作为验收） |
+| `scripts/checks/check_sam.py` | SAM 单图分割 |
+| `scripts/checks/check_interactive_pause.py` | 交互暂停/恢复 |
+| `scripts/checks/check_progressive_gpu.py` | SAM 多提示、ROI、抽帧、SAM2 纠偏/回填（GPU 验证） |
+| `scripts/checks/check_cancel.py` | 取消语义 |
+| `scripts/acceptance/acceptance_backend.py` | 裸后端验收 |
+| `scripts/acceptance/acceptance_frozen.py` | 发布目录隔离验收 |
+| `scripts/acceptance/acceptance_frozen_progressive.py` | 发布目录渐进式验收 |
+| `scripts/acceptance/probe_frozen_engine.py` | TensorRT engine 探测 |
 
 这些脚本通常需要真实模型/GPU/视频，属于“发布前人工验收”，不在 CI 默认路径中。
 

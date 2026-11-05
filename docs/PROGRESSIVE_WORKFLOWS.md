@@ -16,7 +16,7 @@
 
 ### 1.1 单图：多提示 + ROI + 同一对象
 
-`scripts/check_progressive_gpu.py` 通过真实 JSONL 桥接进程执行：
+`scripts/checks/check_progressive_gpu.py` 通过真实 JSONL 桥接进程执行：
 
 1. `project.open`；
 2. `sam.segment`：
@@ -98,7 +98,7 @@
 - 能访问 `ultralytics.utils.ASSETS/zidane.jpg`（首次会下载）。
 
 ```powershell
-python scripts/check_progressive_gpu.py
+python scripts/checks/check_progressive_gpu.py
 ```
 
 输出：
@@ -130,10 +130,10 @@ acceptance/progressive_gpu/latest.json
 
 ## 3. 冻结后端渐进式验收
 
-`desktop/scripts/acceptance_frozen_progressive.py` 用发布目录中的 `backend.exe`，在干净环境（仅 System32 PATH、独立 APPDATA、临时工作目录）重跑关键链路：
+`scripts/acceptance/acceptance_frozen_progressive.py` 用发布目录中的 `backend.exe`，在干净环境（仅 System32 PATH、独立 APPDATA、临时工作目录）重跑关键链路：
 
 ```powershell
-python desktop/scripts/acceptance_frozen_progressive.py `
+python scripts/acceptance/acceptance_frozen_progressive.py `
   "Release/TrainStudio-WPF" `
   "acceptance/wpf/frozen/inputs/fixture_04.jpg" `
   "acceptance/wpf/frozen/inputs/portrait.mp4" `

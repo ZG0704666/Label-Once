@@ -20,7 +20,7 @@
 - [ ] `python -m pytest -q` 通过
 - [ ] `ruff check .` 通过
 - [ ] `mypy studio --no-site-packages` 通过
-- [ ] `python scripts/check_lock_sync.py` 通过（改过依赖时）
+- [ ] `python scripts/checks/check_lock_sync.py` 通过（改过依赖时）
 - [ ] `dotnet build desktop/LabelOnce.sln -c Release` 0 警告 0 错误
 - [ ] `dotnet test desktop/LabelOnce.Core.Tests -c Release` 通过
 - [ ] 涉及 WPF 交互：已按 `docs/WPF_ACCEPTANCE.md` 手工验收，并附截图/录屏

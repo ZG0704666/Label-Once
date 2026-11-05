@@ -1,7 +1,7 @@
 # Qt is intentionally excluded from the production backend.
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, collect_dynamic_libs
 hiddenimports = collect_submodules('ultralytics') + collect_submodules('openvino') + ['tensorrt', 'tensorrt_bindings', 'onnxruntime', 'onnxslim', 'torchvision', 'torch.distributed.run', 'studio.bridge', 'studio.worker']
-a = Analysis(['backend_launch.py'], pathex=['.'], hiddenimports=hiddenimports,
+a = Analysis(['backend/backend_launch.py'], pathex=['.'], hiddenimports=hiddenimports,
     datas=collect_data_files('ultralytics'), binaries=collect_dynamic_libs('tensorrt_libs'),
     runtime_hooks=['scripts/rth_torch.py'], excludes=['pytest','notebook','IPython','PySide6','PyQt6','PyQt5','tkinter','tensorflow','jax'])
 pyz = PYZ(a.pure)

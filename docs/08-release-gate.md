@@ -2,7 +2,7 @@
 
 发布门禁（Release Gate）用于在模型交付前回答一个问题：**这个模型是否比上一版更差，或是否在“作弊”的数据划分上取得了虚高指标？**
 
-实现：`scripts/check_release_gate.py`。UI 入口：WPF 模型页 → “发布门禁”；后端任务：`kind=gate`。
+实现：`scripts/checks/check_release_gate.py`。UI 入口：WPF 模型页 → “发布门禁”；后端任务：`kind=gate`。
 
 ---
 
@@ -25,7 +25,7 @@
 CLI 示例：
 
 ```powershell
-python scripts/check_release_gate.py `
+python scripts/checks/check_release_gate.py `
   --project "D:\data\我的项目" `
   --model "D:\data\我的项目\Model\train_20261026.pt" `
   --golden "D:\data\golden\dataset.yaml" `

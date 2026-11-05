@@ -76,7 +76,7 @@ git status --short
 python -m pytest -q
 ruff check .
 mypy studio --no-site-packages
-python scripts/check_lock_sync.py
+python scripts/checks/check_lock_sync.py
 dotnet build desktop/LabelOnce.sln -c Release
 dotnet test desktop/LabelOnce.Core.Tests -c Release
 ```
@@ -112,7 +112,7 @@ dotnet test desktop/LabelOnce.Core.Tests -c Release
 GitHub Actions 工作流：`.github/workflows/ci.yml`。
 
 - `python-tests`：Python 3.10 + 轻量依赖 + `pytest -q`；
-- `python-lint`：lock 同步检查（`scripts/check_lock_sync.py`）+ `ruff` + `mypy`；
+- `python-lint`：lock 同步检查（`scripts/checks/check_lock_sync.py`）+ `ruff` + `mypy`；
 - `dotnet-build`：`dotnet restore/build LabelOnce.sln -c Release`；
 - `dotnet-test`：`dotnet test LabelOnce.Core.Tests -c Release`（几何/标注纯逻辑单元测试）；
 - `package-windows`：tag/手动触发时发布 WPF 并上传 artifact，**依赖上面四个作业全部通过**。

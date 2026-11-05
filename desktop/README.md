@@ -39,12 +39,12 @@ Windows x64 本地标注、训练与模型工作台。新界面使用 .NET 10 WP
 
 ## 验证与限制
 
-`LabelOnce.Core.Tests` 是独立几何断言程序；`LabelOnce.Desktop.Tests` 启动真实 WPF 窗口；`scripts/check_progressive_gpu.py` 验证 SAM 多提示、ROI、视频抽帧、SAM2 mask 纠偏和回填。最新改动与证据见 `PROGRESSIVE_WORKFLOWS.md`（源码 `docs/PROGRESSIVE_WORKFLOWS.md`）。合成数据验收不代表模型准确率。
+`LabelOnce.Core.Tests` 是独立几何断言程序；`LabelOnce.Desktop.Tests` 启动真实 WPF 窗口；`scripts/checks/check_progressive_gpu.py` 验证 SAM 多提示、ROI、视频抽帧、SAM2 mask 纠偏和回填。最新改动与证据见 `PROGRESSIVE_WORKFLOWS.md`（源码 `docs/PROGRESSIVE_WORKFLOWS.md`）。合成数据验收不代表模型准确率。
 
 发布后端的完整隔离验证：
 
 ```powershell
-python ./desktop/scripts/acceptance_frozen.py '../../Release/TrainStudio-WPF' ./acceptance/wpf/fixtures ./acceptance/wpf/frozen
+python ./scripts/acceptance/acceptance_frozen.py '../../Release/TrainStudio-WPF' ./acceptance/wpf/fixtures ./acceptance/wpf/frozen
 ./desktop/scripts/test-desktop.ps1 -Project './acceptance/wpf/frozen/中文 空格成品项目' -Fixtures ./acceptance/wpf/frozen/inputs
 ```
 

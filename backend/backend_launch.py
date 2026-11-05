@@ -1,6 +1,12 @@
 """Frozen headless entry. WPF starts it with redirected pipes and CREATE_NO_WINDOW."""
 import multiprocessing
+import os
 import sys
+# The launcher lives in backend/, but the `studio` package lives at the repo root.
+# Running `python backend/backend_launch.py` puts backend/ (not the root) on sys.path,
+# so anchor the root explicitly before importing studio. Harmless in frozen mode
+# (PyInstaller provides studio via hiddenimports and ignores sys.path inserts).
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     if '--worker' in sys.argv:

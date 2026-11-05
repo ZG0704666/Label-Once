@@ -1,13 +1,13 @@
 import os,sys
 from pathlib import Path
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]))
 os.environ['YOLO_AUTOINSTALL']='False'
 import cv2
 from ultralytics.utils import ASSETS
 from studio.domain import save_json,unique_id
 from studio.worker import Worker
 from studio.tracking import Sam2Backend
-root=Path(__file__).resolve().parents[1];out=root/'acceptance'/'sam';out.mkdir(parents=True,exist_ok=True)
+root=Path(__file__).resolve().parents[2];out=root/'acceptance'/'sam';out.mkdir(parents=True,exist_ok=True)
 image=cv2.imread(str(ASSETS/'zidane.jpg'));image=cv2.resize(image,(640,360));cv2.imencode('.jpg',image)[1].tofile(out/'input.jpg')
 video=out/'pair.mp4';writer=cv2.VideoWriter(str(video),cv2.VideoWriter_fourcc(*'mp4v'),10,(640,360))
 for i in range(12):writer.write(image)

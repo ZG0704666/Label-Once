@@ -86,7 +86,7 @@ acceptance/wpf/frozen/
 ## 3. 冻结后端验收
 
 ```powershell
-python desktop/scripts/acceptance_frozen.py `
+python scripts/acceptance/acceptance_frozen.py `
   "Release/TrainStudio-WPF" `
   "acceptance/wpf/frozen/inputs" `
   "acceptance/wpf/frozen/backend"
@@ -142,7 +142,7 @@ acceptance/wpf/frozen/backend/
 ## 4. 冻结后端渐进式验收
 
 ```powershell
-python desktop/scripts/acceptance_frozen_progressive.py `
+python scripts/acceptance/acceptance_frozen_progressive.py `
   "Release/TrainStudio-WPF" `
   "acceptance/wpf/frozen/inputs/fixture_04.jpg" `
   "acceptance/wpf/frozen/inputs/portrait.mp4" `
@@ -163,7 +163,7 @@ python desktop/scripts/acceptance_frozen_progressive.py `
 ## 5. TensorRT 探测
 
 ```powershell
-python desktop/scripts/probe_frozen_engine.py `
+python scripts/acceptance/probe_frozen_engine.py `
   "Release/TrainStudio-WPF" `
   "acceptance/wpf/frozen/engine"
 ```

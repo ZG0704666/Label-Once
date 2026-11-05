@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 from PIL import Image
 
-GATE_SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'check_release_gate.py'
+GATE_SCRIPT = Path(__file__).resolve().parents[1] / 'scripts' / 'checks' / 'check_release_gate.py'
 
 
 def load_gate():

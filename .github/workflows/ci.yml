@@ -56,7 +56,7 @@ jobs:
 
       # Keep the direct pins and the resolved lock in sync (stdlib-only, runs first).
       - name: Check lock sync
-        run: python scripts/check_lock_sync.py
+        run: python scripts/checks/check_lock_sync.py
 
       # Ruff lint uses the project's own [tool.ruff] config in pyproject.toml.
       # The rule set is deliberately scoped (see the config comments) to flag

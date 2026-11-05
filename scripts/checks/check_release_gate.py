@@ -14,7 +14,7 @@
 
 用法
 ----
-python scripts/check_release_gate.py \
+python scripts/checks/check_release_gate.py \
     --project "F:/Aries AI/项目" \
     --model "F:/Aries AI/项目/Model/train_xxx.pt" \
     --golden "F:/Aries AI/Aries Glass/golden/v1.1.0/dataset.yaml" \
