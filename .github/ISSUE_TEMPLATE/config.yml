@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: 使用问题 / Usage question
-    url: https://github.com/ZG0704666/Label-Once/discussions
-    about: 使用方法、参数含义等问题请到 Discussions，先看 docs/ 文档中心。
-  - name: 文档中心 / Documentation
-    url: https://github.com/ZG0704666/Label-Once/tree/main/docs
-    about: 标注、视频、数据集、训练、导出与故障排查的完整说明。
