@@ -14,6 +14,28 @@ include = ["studio*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+# ---------------------------------------------------------------- coverage
+# Regression ratchet, not a target: CI runs pytest with --cov and fails if total
+# coverage of the studio package drops below this floor. The floor sits just under
+# today's measured coverage (~63%), leaving headroom for small run-to-run variation
+# (measured 62.88%–63.08%) while still blocking any real regression. Raise it as
+# tests are added.
+# The uncovered remainder is deliberate: tracking.py / worker.py / interactive_sam.py
+# exercise GPU + ultralytics paths covered by the scripts/check_*.py acceptance suite
+# and the WPF harness, not by the torch-free unit suite (see docs/12-testing.md).
+[tool.coverage.run]
+source = ["studio"]
+omit = ["studio/__init__.py"]
+
+[tool.coverage.report]
+fail_under = 62
+show_missing = true
+skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
+
 # ---------------------------------------------------------------- ruff
 # Lint gate. Default rules (pyflakes F + pycodestyle E/W) plus bugbear (B),
 # pyupgrade (UP) and ruff-specific (RUF) checks. The ignore list suppresses the

@@ -35,10 +35,11 @@ jobs:
           python -m pip install --upgrade pip
           # 测试使用假模型替身（tests/ 中的 FakeYOLO / sys.modules stub），
           # 不导入 ultralytics / torch / PyQt5，因此无需安装体积巨大的 ML 运行时。
-          python -m pip install pytest numpy opencv-python Pillow PyYAML
+          python -m pip install pytest numpy opencv-python Pillow PyYAML pytest-cov
 
+      # --cov uses the [tool.coverage] config in pyproject.toml (fail_under ratchet).
       - name: Run Python tests
-        run: python -m pytest -q
+        run: python -m pytest -q --cov --cov-report=term-missing
 
   python-lint:
     name: Python lint & types
@@ -151,9 +152,53 @@ jobs:
       - name: Create release archive
         run: Compress-Archive -Path Release/LabelOnce-wpf-win-x64/* -DestinationPath Release/LabelOnce-wpf-win-x64.zip
 
+      # SHA256 lets users verify the downloaded artifact and makes the release
+      # auditable. Emitted next to the archive so both upload together.
+      - name: Generate SHA256 checksum
+        working-directory: Release
+        shell: pwsh
+        run: |
+          $zip = 'LabelOnce-wpf-win-x64.zip'
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
+          "$hash  $zip" | Out-File -Encoding ascii "$zip.sha256"
+          Write-Host "SHA256: $hash"
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: LabelOnce-wpf-win-x64
-          path: Release/LabelOnce-wpf-win-x64.zip
+          path: |
+            Release/LabelOnce-wpf-win-x64.zip
+            Release/LabelOnce-wpf-win-x64.zip.sha256
           if-no-files-found: error
+
+  # Publishes a GitHub Release when a v*.*.* tag is pushed. Gated on every test/lint
+  # job. The archive is the WPF desktop build; the full shippable release (backend.exe
+  # + models/sam weights) still requires a local `desktop/scripts/build.ps1` run on a
+  # machine with the labelonce conda env, because CI deliberately installs no ML runtime.
+  release-publish:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - python-tests
+      - python-lint
+      - dotnet-build
+      - dotnet-test
+      - package-windows
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Download packaged artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: LabelOnce-wpf-win-x64
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            LabelOnce-wpf-win-x64.zip
+            LabelOnce-wpf-win-x64.zip.sha256
