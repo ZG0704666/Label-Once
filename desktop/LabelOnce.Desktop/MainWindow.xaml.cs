@@ -70,7 +70,7 @@ public partial class MainWindow : FluentWindow
             case "tracking-targets":{bool locked=Canvas.ReadOnly;Canvas.ReadOnly=false;Canvas.SetBoxes(vm.PendingSam);Canvas.ReadOnly=locked;vm.SyncObjects();break;} // record=true：暂停期间可撤销注入取出/改绘前的状态
             case "tracking-next-id":Canvas.NextTargetId=Math.Max(Canvas.NextTargetId,vm.TrackingNextId);break;
             case "stop-navigation":Canvas.StopNavigation();break;
-            case "clear-document":vm.CurrentSourcePath="Label Once";Canvas.Clear();LibraryCanvas.Clear();VideoBar.Visibility=Visibility.Collapsed;break;
+            case "clear-document":vm.CurrentSourcePath=Branding.ProductName;Canvas.Clear();LibraryCanvas.Clear();VideoBar.Visibility=Visibility.Collapsed;break;
             default:_=vm.Safe(()=>ChangeMode(action));break;
         }
     }

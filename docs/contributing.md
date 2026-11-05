@@ -74,7 +74,11 @@ git status --short
 
 ```powershell
 python -m pytest -q
-dotnet run --project desktop/LabelOnce.Core.Tests -c Release
+ruff check .
+mypy studio --no-site-packages
+python scripts/check_lock_sync.py
+dotnet build desktop/LabelOnce.sln -c Release
+dotnet test desktop/LabelOnce.Core.Tests -c Release
 ```
 
 涉及 WPF 交互时，再运行 [WPF 成品验收](./WPF_ACCEPTANCE.md) 或 `test-desktop.ps1`。
@@ -87,7 +91,9 @@ dotnet run --project desktop/LabelOnce.Core.Tests -c Release
 - 划分改动覆盖“同组同 split”和确定性；
 - 协议改动覆盖请求/响应/错误帧。
 
-详见 [测试与验收](./12-testing.md)。
+测试布局：纯逻辑 .NET 测试在 `desktop/LabelOnce.Core.Tests`（xUnit，CI 中以 `dotnet test` 运行）；
+`desktop/LabelOnce.Desktop.Tests` 是需要真实桌面与后端的交互式 WPF 验收桩，
+不在 CI 中运行，改为按文档手工执行。详见 [测试与验收](./12-testing.md)。
 
 ---
 
@@ -106,14 +112,19 @@ dotnet run --project desktop/LabelOnce.Core.Tests -c Release
 GitHub Actions 工作流：`.github/workflows/ci.yml`。
 
 - `python-tests`：Python 3.10 + 轻量依赖 + `pytest -q`；
+- `python-lint`：lock 同步检查（`scripts/check_lock_sync.py`）+ `ruff` + `mypy`；
 - `dotnet-build`：`dotnet restore/build LabelOnce.sln -c Release`；
-- `package-windows`：tag/手动触发时发布 WPF 并上传 artifact。
+- `dotnet-test`：`dotnet test LabelOnce.Core.Tests -c Release`（几何/标注纯逻辑单元测试）；
+- `package-windows`：tag/手动触发时发布 WPF 并上传 artifact，**依赖上面四个作业全部通过**。
 
-PR 合并前应确保两个基础作业通过。若修改测试依赖，请先阅读 [构建、打包与 CI](./11-build-release-ci.md) 中关于 torch DLL 的说明，不要把重型 ML 运行时重新加回主测试作业。
+PR 合并前应确保基础作业通过。若修改测试依赖，请先阅读 [构建、打包与 CI](./11-build-release-ci.md) 中关于 torch DLL 的说明，不要把重型 ML 运行时重新加回主测试作业；
+改过依赖版本时同步 `requirements.txt` 与 `requirements.lock.txt`（`python-lint` 里的 lock 同步检查会拦住漂移）。
 
 ---
 
 ## 7. PR 检查清单
+
+打开 PR 时会自动套用 `.github/PULL_REQUEST_TEMPLATE.md`，请逐项勾选：
 
 - [ ] 功能/修复有对应测试，或说明为何不需要；
 - [ ] Python 测试通过；
@@ -129,7 +140,11 @@ PR 合并前应确保两个基础作业通过。若修改测试依赖，请先�
 
 ## 8. 报告问题
 
-提交 Issue 时附上：
+提交 Issue 时会自动套用 `.github/ISSUE_TEMPLATE/` 下的模板（缺陷 / 功能建议 / 安全问题）。
+
+**安全问题不要在公开 Issue 披露细节**，请走私密渠道，见根目录 [SECURITY.md](../SECURITY.md)。
+
+提交缺陷时附上：
 
 - 复现步骤与期望/实际行为；
 - 完整错误栈；

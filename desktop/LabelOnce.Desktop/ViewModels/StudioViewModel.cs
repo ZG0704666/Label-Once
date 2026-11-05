@@ -15,7 +15,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
     public const int PageHome=0,PageLibrary=1,PageAnnotation=2,PageTraining=3,PageModel=4,PageSettings=5;
     readonly BridgeClient bridge=new();
     [ObservableProperty] string project="";
-    [ObservableProperty] string projectTitle="Label Once";
+    [ObservableProperty] string projectTitle=LabelOnce.Desktop.Branding.ProductName;
     [ObservableProperty] string status="正在连接本地后端…";
     [ObservableProperty] string log="";
     [ObservableProperty] bool busy;
@@ -83,7 +83,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
     [ObservableProperty] string curvePath="";
     [ObservableProperty] BitmapSource? curveImage;
     [ObservableProperty] IReadOnlyList<TrainingEpoch> epochMetrics=[];
-    [ObservableProperty] string brand="Label Once";
+    [ObservableProperty] string brand=LabelOnce.Desktop.Branding.ProductName;
     [ObservableProperty] string logoPath="";
     [ObservableProperty] int samSize=1024;
     [ObservableProperty] bool acrylic=true;
@@ -92,7 +92,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
     [ObservableProperty] bool backendDown;
     [ObservableProperty] bool videoGpuReleased;
     [ObservableProperty] string viewStatus="适配";
-    [ObservableProperty] string currentSourcePath="Label Once";
+    [ObservableProperty] string currentSourcePath=LabelOnce.Desktop.Branding.ProductName;
     public Func<Task<bool>> ResolveCandidate { get; set; }=()=>Task.FromResult(true);
     public double DisplayProgress=>Busy?Progress:ReviewTotal==0?0:(double)ReviewCompleted/ReviewTotal;
     IEnumerable<ImageEntry> ReviewImages=>allImages.Where(i=>SelectedBatch=="全部批次"?(Filter!="当前批次"||batchId is null||batchId.Length==0||i.Batch==batchId):i.Batch==SelectedBatch);
@@ -205,7 +205,7 @@ public partial class StudioViewModel : ObservableObject, IDisposable
         await Safe(async()=>
         {
             bridge.Start();var hello=await bridge.Call("hello");settings=hello.GetProperty("settings").Clone();
-            Brand=Text(settings,"brand","Label Once");LogoPath=Text(settings,"logo");SamSize=Number(settings,"sam_imgsz",1024);
+            Brand=Text(settings,"brand",LabelOnce.Desktop.Branding.ProductName);LogoPath=Text(settings,"logo");SamSize=Number(settings,"sam_imgsz",1024);
             foreach(var s in settings.GetProperty("recent").EnumerateArray()){var rp=s.GetString()!;if(Directory.Exists(rp))RecentProjects.Add(new(Path.GetFileName(rp.TrimEnd(Path.DirectorySeparatorChar)),rp));}
             advanced=Dictionary(hello.GetProperty("advanced"));augments=Dictionary(hello.GetProperty("augments"));
             Fill(Models,hello.GetProperty("models"));Fill(SamModels,hello.GetProperty("sam_models"));SelectedModel=Models.FirstOrDefault()??"";SelectedSam=SamModels.FirstOrDefault()??"";

@@ -75,7 +75,7 @@ public static class UserDialogs
     }
     public static bool Confirm(string text)
     {
-        var window=new FluentWindow{Title="Label Once",Width=520,SizeToContent=SizeToContent.Height,ResizeMode=ResizeMode.NoResize,WindowStartupLocation=WindowStartupLocation.CenterOwner,Owner=Application.Current.MainWindow,Background=new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(29,35,43))};
+        var window=new FluentWindow{Title=LabelOnce.Desktop.Branding.ProductName,Width=520,SizeToContent=SizeToContent.Height,ResizeMode=ResizeMode.NoResize,WindowStartupLocation=WindowStartupLocation.CenterOwner,Owner=Application.Current.MainWindow,Background=new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(29,35,43))};
         var panel=new StackPanel{Margin=new Thickness(24)};
         panel.Children.Add(new TextBlock{Text=text,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,8,0,24)});
         var actions=new StackPanel{Orientation=Orientation.Horizontal,HorizontalAlignment=HorizontalAlignment.Right};
