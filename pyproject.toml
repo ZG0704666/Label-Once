@@ -13,3 +13,73 @@ include = ["studio*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# ---------------------------------------------------------------- ruff
+# Lint gate. Default rules (pyflakes F + pycodestyle E/W) plus bugbear (B),
+# pyupgrade (UP) and ruff-specific (RUF) checks. The ignore list suppresses the
+# few rule families that conflict with this codebase's deliberate style, so the
+# signal that remains is genuine correctness risk:
+#   C4   – comprehension / dict-literal rewrites; the terse dict() / generator
+#          style here is intentional and consistent.
+#   I001 – import ordering; imports are grouped manually and churn without value.
+#   BLE001 – broad `except Exception` is used deliberately for protocol fault
+#          tolerance (bridge.py, processes.py) and is documented at each site.
+#   B023 – loop-variable capture. The only hits (dataset.py `score`) call the
+#          closure immediately via max(..., key=score) within the same iteration,
+#          so the captured value is always current.
+#   SIM/TRY/RUF059/RUF100 – stylistic rewrites that would add churn without
+#          changing behavior.
+# The second group acknowledges this codebase's deliberate compact style and
+# bilingual content; none of these rules point at real defects here:
+#   E701/E702/E731/E401/E402/W291/W293 – terse one-line statements, lambda
+#          assignment, inline imports and lazy heavy imports (torch/ultralytics
+#          are imported inside functions to keep the GUI path light).
+#   RUF001/RUF002/RUF003 – "ambiguous unicode" fires on every CJK character in
+#          comments, docstrings and UI strings; Chinese text is a first-class
+#          part of this project, so the rule is pure noise.
+#   E501 – the codebase is deliberately line-oriented (long dispatch/preset
+#          lines). Enforcing a wrap width belongs to a formatter pass, not lint.
+#   B905 – zip(strict=) is 3.10+; the zips here pair equal-length model outputs.
+#   B007 – throwaway loop indices (for _ / for i not used) are intentional.
+#   RUF005 – list-concat unpacking is stylistic; the existing form is readable.
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [".venv", ".venv-ci", "build", "dist", "Release", "temp"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "UP", "RUF"]
+ignore = [
+    "C4", "I001", "BLE001", "B023", "SIM", "TRY",
+    "RUF059", "RUF100", "RUF015",
+    "E701", "E702", "E731", "E401", "E402", "E501", "W291", "W293",
+    "RUF001", "RUF002", "RUF003", "RUF005",
+    "B905", "B007",
+]
+
+[tool.ruff.lint.flake8-quotes]
+# Leave the codebase's quote style alone; ruff is a lint gate here, not a formatter.
+inline-quotes = "single"
+
+[tool.ruff.format]
+# Formatting is intentionally NOT enforced in CI (Phase 1). Enabling `ruff format`
+# would reformat the compact, one-line-heavy style across the whole tree in one
+# huge, review-hostile diff. Revisit as a standalone formatting pass later.
+quote-style = "single"
+
+# ---------------------------------------------------------------- mypy
+# Lenient baseline: no annotations exist yet, so untyped function bodies are not
+# analyzed (check_untyped_defs=false). This still validates module-level structure
+# and will catch issues the moment signatures start carrying hints. Tighten by
+# flipping check_untyped_defs on (and adding hints) in the type-annotation phase.
+# --no-site-packages keeps the gate portable: it avoids following into third-party
+# stubs (e.g. numpy ships 3.12 `type` syntax that mypy flags against a 3.10 target),
+# which is safe here because studio imports heavy deps lazily inside functions.
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+check_untyped_defs = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+exclude = ["\\.venv", "\\.venv-ci", "build", "dist", "Release", "temp"]
+

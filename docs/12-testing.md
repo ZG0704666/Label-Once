@@ -18,9 +18,9 @@ python -m pip install pytest numpy opencv-python Pillow PyYAML
 python -m pytest -q
 ```
 
-当前结果：**88 passed, 1 skipped**（不需要真实模型/GPU/torch）。
+当前结果：**79 passed, 1 skipped**（不需要真实模型/GPU/torch）。
 
-CI 使用同一套最小依赖，详见 [构建、打包与 CI](./11-build-release-ci.md)。
+CI 使用同一套最小依赖，并额外跑 ruff（lint）与 mypy（宽松类型基线），详见 [构建、打包与 CI](./11-build-release-ci.md)。
 
 ### 1.2 测试文件与覆盖范围
 
@@ -70,20 +70,22 @@ class FakeYOLO:
 
 ---
 
-## 2. .NET 几何测试
+## 2. .NET 几何测试（xUnit）
+
+`LabelOnce.Core.Tests` 已迁移为 **xUnit** 单元测试项目，用 `dotnet test` 运行：
 
 ```powershell
-dotnet run --project desktop/LabelOnce.Core.Tests -c Release
+dotnet test desktop/LabelOnce.Core.Tests -c Release
 ```
 
-`LabelOnce.Core.Tests` 是一个控制台断言程序，覆盖：
+覆盖：
 
 - Viewport fit/zoom/pan/resize；
 - EXIF 方向 1–8 的坐标往返；
 - 图片/视频切换时的视角重置规则；
-- Annotation 的 `SetBounds`、ROI 裁剪、多边形随框缩放；
-- AnnotationHistory 的撤销/重做/100 步上限/新编辑清空 redo；
-- 目标 ID 与多边形的历史一致性。
+- AnnotationHistory 的撤销/重做/新编辑清空 redo。
+
+原先的控制台断言程序（`Program.cs` + `Check()`）已由 `ViewportTests.cs`、`AnnotationHistoryTests.cs` 取代：矩阵用例保留为穷举 `[Theory]`，状态转移规则拆成独立命名用例，单个失败不再掩盖其余用例。CI 的 `dotnet-test` 作业会自动运行它。
 
 `desktop/scripts/test.ps1` 会先跑 Python 测试，再跑该几何测试。
 

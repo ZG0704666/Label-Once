@@ -3,7 +3,6 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 os.environ['YOLO_AUTOINSTALL']='False'
 import cv2
-import numpy as np
 from ultralytics.utils import ASSETS
 from studio.domain import save_json,unique_id
 from studio.worker import Worker

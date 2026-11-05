@@ -1,10 +1,9 @@
-from dataclasses import replace
 import numpy as np
 import pytest
 from PIL import Image
 
 from studio.domain import Project, Box, mask_box, read_json, save_json
-from studio.annotations import AnnotationConflict, AnnotationStore
+from studio.annotations import AnnotationConflict
 from studio.review import ReviewStore
 from studio.segmentation import export_segmentation
 

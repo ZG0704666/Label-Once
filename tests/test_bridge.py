@@ -1,8 +1,6 @@
-import io
 import json
 import sys
 import subprocess
-import time
 from pathlib import Path
 from PIL import Image
 import pytest

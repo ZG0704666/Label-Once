@@ -11,7 +11,7 @@ import traceback
 from dataclasses import asdict
 from pathlib import Path
 
-from .domain import Box, IMAGE_EXTENSIONS, Labels, Project, atomic_write, mask_box, read_json, save_json
+from .domain import Box, IMAGE_EXTENSIONS, Labels, Project, mask_box, read_json, save_json
 
 
 EVENT_PATH = None

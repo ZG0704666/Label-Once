@@ -6,6 +6,11 @@ if __name__ == '__main__':
     if '--worker' in sys.argv:
         from studio.worker import main
         raise SystemExit(main(sys.argv[sys.argv.index('--worker')+1]))
+    elif '--bridge' in sys.argv:
+        # BridgeClient launches the frozen backend with --bridge. Handle it explicitly so the
+        # bridge is started by intent, not by falling through the argument chain by accident.
+        from studio.bridge import main
+        raise SystemExit(main())
     elif len(sys.argv)>2 and sys.argv[1]=='-m':
         import runpy
         module=sys.argv[2];sys.argv=sys.argv[2:]

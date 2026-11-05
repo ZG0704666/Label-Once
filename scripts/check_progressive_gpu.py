@@ -15,7 +15,7 @@ import torch
 from ultralytics.utils import ASSETS
 from studio.domain import Project, Box, read_json, save_json
 from studio.annotations import fingerprint
-from studio.review import ReviewStore, import_video
+from studio.review import import_video
 from studio.segmentation import export_segmentation
 from studio.worker import Worker
 from studio.tracking import Sam2Backend
@@ -83,7 +83,6 @@ def main():
     backend.correct_current(str(video),2,{7:dict(target,pixels=[96,90,256,306])})
     idx,_,masks=backend.next_frame();assert idx==2 and set(masks)=={7};backend.close()
     report.update(mask_prompt_iou=float(iou));report['checks'].append('real SAM2 polygon mask init/correction with stable target 7')
-    from studio.domain import Box
     for name in names[1:5]:
         p.labels.save(Path(name).stem,[Box(0,.15,.25,.4,.85,'人工',polygons=[ring],target_id=7)])
     tracking_run=out/'tracking' 

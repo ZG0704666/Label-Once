@@ -5,7 +5,6 @@ import shutil
 import sys
 from pathlib import Path
 
-import pytest
 import yaml
 from PIL import Image
 
@@ -29,7 +28,7 @@ def write_dataset(root: Path, names, images=('a.jpg', 'b.jpg'), labels=None, spl
     for index, name in enumerate(images):
         # Distinct content per file so that content hashes are meaningful.
         Image.new('RGB', (32, 32), (color[0], color[1], color[2] + index)).save(root / 'images' / split / name)
-        body = labels[index] if labels else f'0 0.5 0.5 0.2 0.2\n'
+        body = labels[index] if labels else '0 0.5 0.5 0.2 0.2\n'
         (root / 'labels' / split / f'{Path(name).stem}.txt').write_text(body, encoding='utf-8')
     data = dict(path=str(root), train=train_spec or f'images/{split}', val=f'images/{split}',
                 nc=len(names), names={index: name for index, name in enumerate(names)})

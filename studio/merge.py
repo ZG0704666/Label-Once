@@ -531,7 +531,7 @@ def merge(store, spec, progress=None, check=None):
     if blocks:
         raise ValueError('整合被阻断，请先解决以下问题：\n' + '\n'.join(
             f'[{b["code"]}] {b["message"]}' for b in blocks))
-    spec, records, entries = plan['spec'], plan['records'], plan['entries']
+    spec, records = plan['spec'], plan['records']
     names, new_names = plan['names'], plan['new_names']
     progress(0.40, f'样本 {len(records)}，类别 {len(names)}（新增 {len(new_names)} 个）')
     # 新类必须先落进项目类别表（只追加），这样预览里确认的表就是实际训练的表。

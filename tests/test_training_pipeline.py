@@ -3,6 +3,7 @@ import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from typing import ClassVar
 
 import pytest
 from PIL import Image
@@ -109,8 +110,8 @@ def test_optimizer_is_pinned_instead_of_auto():
 class FakeYOLO:
     """Stands in for ultralytics.YOLO and records what the worker passes to train()."""
 
-    captured = None
-    instances = []
+    captured: ClassVar = None
+    instances: ClassVar[list] = []
 
     def __init__(self, path):
         self.path = path

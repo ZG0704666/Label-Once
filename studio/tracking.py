@@ -79,7 +79,6 @@ class Sam2Backend:
             self.predictor.setup_model(model=self.model, verbose=False)
         self.ids = list(targets)
         if any(targets[i].get('polygons') for i in self.ids):
-            import numpy as np
             width, height = int(loader.cap.get(3)), int(loader.cap.get(4))
             self.stream = self.predictor(source=loader, masks=self.rasterize_targets(targets, width, height), stream=True)
         else:
@@ -262,7 +261,6 @@ def run_tracking(worker):
     if targets:backend.start_segment(str(video), start, prepared())
     paused, frame_index, last_preview = not bool(targets), start, -1
     emit('tracking_state',state='paused' if paused else 'tracking',targets=targets,frame=frame_index)
-    retry_current = False
     finish_requested = False
     loss_counter = {}  # target_id -> 连续丢失帧数（失败分级宽限用）
     pause_idle = time.monotonic()
@@ -302,7 +300,6 @@ def run_tracking(worker):
                     if targets:
                         backend.correct_current(str(video),frame_index,prepared())
                         loss_counter.clear()
-                        retry_current = False
                     paused = False
                 elif action in ('correct','add','end','seek','commit','finish_review'):
                     if not paused:
@@ -360,7 +357,6 @@ def run_tracking(worker):
                             continue
                         loss_counter.clear()
                     checkpoint = frame_index-1
-                    retry_current = False
                     if action in ('commit','finish_review'):paused=not bool(targets)
                     if action=='finish_review':finish_requested=True
                     if paused:preview_current()
@@ -445,7 +441,6 @@ def run_tracking(worker):
                         pending_failures[target_id] = reason
                 if pending_failures:
                     paused = True
-                    retry_current = True
                     manifest['state'] = 'paused'
                     manifest['events'].append(dict(frame=frame_index,action='quality_failure',failures=pending_failures))
                     save_json(manifest_path,manifest)

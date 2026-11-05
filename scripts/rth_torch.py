@@ -22,4 +22,6 @@ if sys.stdout is None:
     sys.stdout = open(os.devnull, 'w', encoding='utf-8')
 if sys.stderr is None:
     sys.stderr = open(os.devnull, 'w', encoding='utf-8')
-import torch
+# Side-effect import: preloads torch's native DLLs (c10/cuda) before any Qt runtime
+# hook runs, and warms the PyInstaller-bundled torch package. Never remove.
+import torch  # noqa: F401

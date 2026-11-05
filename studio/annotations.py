@@ -1,6 +1,5 @@
 """Versioned pixel geometry with atomic canonical commit and repairable projections."""
 from dataclasses import asdict
-from pathlib import Path
 import hashlib
 import json
 import uuid
